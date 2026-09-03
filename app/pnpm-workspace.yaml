@@ -1,0 +1,8 @@
+overrides:
+  node-abi: ^4.31.0
+
+allowBuilds:
+  better-sqlite3: true
+  electron: true
+  electron-winstaller: true
+  esbuild: true

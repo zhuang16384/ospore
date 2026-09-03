@@ -1,0 +1,82 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Dependency directories
+node_modules/
+jspm_packages/
+.pnpm-debug-log*
+.eslintcache
+
+# Build outputs
+dist/
+dist-ssr/
+release/
+build/release/
+*.out
+*.exe
+*.app
+*.ipa
+*.dmg
+
+# app/: electron-vite, electron-builder, and Playwright all write under one
+# directory so editors only need to hide a single path
+/app/build-output/
+
+# IDEs and Editors
+.vscode/*
+!.vscode/extensions.json
+!.vscode/launch.json
+!.vscode/settings.json
+!.vscode/tasks.json
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+.history/
+
+# OS Files
+.DS_Store
+.DS_Store?
+._*
+Thumbs.db
+desktop.ini
+
+# TypeScript
+*.tsbuildinfo
+*.next
+
+# Testing
+coverage/
+*.lcov
+.nyc_output
+
+# Env files
+.env
+.env.*
+!.env.example
+
+# Electron / Vite
+.electron-builder/
+.electron-vite/
+.vite/
+
+# System
+[Tt]humbs.db
+
+# Security
+*.pem
+*.key
+*.csr
+*.crt
+*.p12
+*.pfx
+
+# Project documentation & runtime logs (kept local, not tracked)
+/docs/
