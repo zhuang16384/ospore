@@ -15,7 +15,7 @@ import { join } from 'node:path'
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const electronPath = require('electron') as unknown as string
 
-/** app/ — its package.json `main` points at out/main/index.js (the built app). */
+/** Repo root — its package.json `main` points at out/main/index.js (the built app). */
 const appRoot = join(__dirname, '..', '..')
 
 export interface OsporeApp {

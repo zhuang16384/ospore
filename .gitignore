@@ -23,16 +23,12 @@ build/release/
 *.ipa
 *.dmg
 
-# app/: electron-vite, electron-builder, and Playwright all write under one
+# Build outputs: electron-vite, electron-builder, and Playwright all write under one
 # directory so editors only need to hide a single path
-/app/build-output/
+/build-output/
 
 # IDEs and Editors
-.vscode/*
-!.vscode/extensions.json
-!.vscode/launch.json
-!.vscode/settings.json
-!.vscode/tasks.json
+.vscode/
 .idea/
 *.suo
 *.ntvs*

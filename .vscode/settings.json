@@ -1,8 +1,0 @@
-{
-  "files.exclude": {
-    "app/build-output": true
-  },
-  "search.exclude": {
-    "app/build-output": true
-  }
-}
