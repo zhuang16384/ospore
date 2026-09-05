@@ -14,9 +14,9 @@ import { hardenNavigation } from './windows/harden'
 
 let mainWindow: BrowserWindow | null = null
 
-/** Default size when no saved geometry exists. */
-const DEFAULT_WIDTH = 920
-const DEFAULT_HEIGHT = 720
+/** Default size when no saved geometry exists. Wide enough for a kanban rail. */
+const DEFAULT_WIDTH = 1280
+const DEFAULT_HEIGHT = 800
 
 export function createMainWindow(): BrowserWindow {
   const window = new BrowserWindow({

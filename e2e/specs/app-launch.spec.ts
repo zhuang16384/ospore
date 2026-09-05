@@ -8,11 +8,12 @@ test.describe('app launch', () => {
     await expect(page).toHaveTitle('Ospore')
   })
 
-  test('answers a renderer -> main ping', async ({ ospore }) => {
+  // Full-stack smoke: renderer boots, store initializes, IPC bridge answers,
+  // and the SQLite-backed empty state renders. (The kanban spec covers the
+  // deeper CRUD/drag/persistence loop.)
+  test('loads the projects view with no projects', async ({ ospore }) => {
     const { page } = ospore
 
-    await page.getByRole('button', { name: 'Ping main' }).click()
-
-    await expect(page.getByTestId('ping-reply')).toHaveText('pong')
+    await expect(page.getByTestId('projects-empty')).toBeVisible()
   })
 })

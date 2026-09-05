@@ -8,7 +8,8 @@ import { join } from 'node:path'
  *
  * Every test gets a fresh temp data dir (OSPORE_DATA_DIR — reserved for the
  * app's data root so future stores never touch the real ~/.ospore during
- * E2E) and a live first window.
+ * E2E) and a live first window. `launchOspore()` is exported separately so
+ * restart tests can relaunch against the *same* data dir.
  */
 
 // In a plain Node process, require('electron') resolves to the binary path.
@@ -24,25 +25,32 @@ export interface OsporeApp {
   dataDir: string
 }
 
+/** Launch the built app against an explicit data dir (fresh or reused). */
+export async function launchOspore(dataDir: string): Promise<ElectronApplication> {
+  const app = await _electron.launch({
+    executablePath: electronPath,
+    args: [appRoot, ...(process.env.CI ? ['--no-sandbox', '--disable-gpu'] : [])],
+    env: { ...process.env, OSPORE_DATA_DIR: dataDir }
+  })
+  // Surface main-process crashes (e.g. a better-sqlite3 ABI mismatch) instead
+  // of dying silently as a firstWindow() timeout.
+  app.process().stderr?.on('data', (chunk) => console.error(`[electron] ${chunk}`))
+  return app
+}
+
 export const test = base.extend<{ ospore: OsporeApp }>({
   // eslint-disable-next-line no-empty-pattern -- Playwright requires the first fixture arg to be destructured
   ospore: async ({}, use) => {
     const dataDir = mkdtempSync(join(tmpdir(), 'ospore-e2e-data-'))
 
-    const app = await _electron.launch({
-      executablePath: electronPath,
-      args: [appRoot, ...(process.env.CI ? ['--no-sandbox', '--disable-gpu'] : [])],
-      env: { ...process.env, OSPORE_DATA_DIR: dataDir }
-    })
-    // Surface main-process crashes (e.g. a better-sqlite3 ABI mismatch) instead
-    // of dying silently as a firstWindow() timeout.
-    app.process().stderr?.on('data', (chunk) => console.error(`[electron] ${chunk}`))
-
+    const app = await launchOspore(dataDir)
     const page = await app.firstWindow()
 
     await use({ app, page, dataDir })
 
     await app.close()
+    // give the OS a beat to release the sqlite files before the temp cleanup
+    await new Promise((resolve) => setTimeout(resolve, 250))
     rmSync(dataDir, { recursive: true, force: true })
   }
 })

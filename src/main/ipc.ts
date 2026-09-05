@@ -1,5 +1,6 @@
 import { ipcMain } from 'electron'
-import { IpcEvents } from '@shared/ipc-events'
+import { registerKanbanHandlers } from './kanban-ipc'
+import type { KanbanStore } from './db/store'
 
 /**
  * Central IPC module.
@@ -19,6 +20,6 @@ export interface IPCMainLike {
 /** Manager bound to Electron's `ipcMain`. Prefer this over importing ipcMain directly. */
 export const ipcManager: IPCMainLike = ipcMain
 
-export function setupIPC(customIPCMain: IPCMainLike = ipcManager): void {
-  customIPCMain.handle(IpcEvents.PING, async () => 'pong')
+export function setupIPC(customIPCMain: IPCMainLike = ipcManager, store: KanbanStore): void {
+  registerKanbanHandlers(customIPCMain, store)
 }

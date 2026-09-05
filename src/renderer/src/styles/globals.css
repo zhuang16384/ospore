@@ -118,7 +118,12 @@
   body {
     background: var(--color-bg);
     color: var(--color-text-primary);
-    font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+    font-family:
+      system-ui,
+      -apple-system,
+      'Segoe UI',
+      Roboto,
+      sans-serif;
     font-size: var(--font-note);
     line-height: 1.6;
     -webkit-font-smoothing: antialiased;

@@ -19,7 +19,7 @@
     "e2e:debug": "PWDEBUG=1 playwright test",
     "start": "electron-vite preview",
     "predev": "electron-rebuild -f -w better-sqlite3",
-    "dev": "electron-vite dev",
+    "dev": "OSPORE_DATA_DIR=$PWD/.test-data electron-vite dev",
     "prestart": "electron-rebuild -f -w better-sqlite3",
     "build": "pnpm run typecheck && electron-vite build",
     "postinstall": "electron-rebuild -f -w better-sqlite3",
