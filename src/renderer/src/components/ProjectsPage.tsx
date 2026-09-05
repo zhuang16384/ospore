@@ -7,17 +7,12 @@ import { useState } from 'react'
 import { Archive, ArchiveRestore, Pencil, Plus, Trash2 } from 'lucide-react'
 import { MAX_NAME_LENGTH } from '@shared/kanban'
 import type { Project } from '@shared/kanban'
-import { unixSecondsToDate } from '@shared/time'
+import { unixSecondsToDatestamp } from '@shared/time'
 import { useKanban } from '@renderer/stores/kanban'
 import { Button } from '@renderer/components/ui/button'
 import { Input } from '@renderer/components/ui/input'
 import { ConfirmDialog } from '@renderer/components/ui/modal'
 import { NameDialog } from '@renderer/components/ui/name-dialog'
-
-/** Format a `createdAt` Unix-seconds timestamp as a local date. */
-function formatDate(unixSeconds: number): string {
-  return unixSecondsToDate(unixSeconds).toLocaleDateString()
-}
 
 export function ProjectsPage(): JSX.Element {
   const projects = useKanban((s) => s.projects)
@@ -110,7 +105,7 @@ function ProjectCard({ project }: { project: Project }): JSX.Element {
       >
         <span className="block font-medium">{project.name}</span>
         <span className="mt-1 block text-small text-text-muted">
-          Created {formatDate(project.createdAt)}
+          Created {unixSecondsToDatestamp(project.createdAt)}
         </span>
       </button>
       <div className="mt-3 flex gap-1 opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
