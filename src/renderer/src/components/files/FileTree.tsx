@@ -56,7 +56,7 @@ function DirectoryRow({ node, depth }: { node: FileNode; depth: number }): JSX.E
     <>
       <button
         type="button"
-        className="flex w-full items-center gap-1 rounded-sm py-1 text-left text-small hover:accent-surface"
+        className="flex w-full items-center gap-1 rounded-sm py-1 text-left text-small hover:bg-accent-surface"
         style={{ paddingLeft: `${depth * 12 + 8}px` }}
         aria-expanded={expanded}
         onClick={() => void toggle(node.path)}
@@ -85,7 +85,7 @@ function FileRow({ node, depth }: { node: FileNode; depth: number }): JSX.Elemen
       title={node.openable ? node.path : 'Only markdown and html can be opened in v0'}
       className={cn(
         'flex w-full items-center gap-1 rounded-sm py-1 text-left text-small',
-        node.openable ? 'hover:accent-surface' : 'cursor-default text-text-muted',
+        node.openable ? 'hover:bg-accent-surface' : 'cursor-default text-text-muted',
         active && 'bg-accent-surface text-text-primary'
       )}
       style={{ paddingLeft: `${depth * 12 + 22}px` }}

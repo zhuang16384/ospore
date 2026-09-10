@@ -13,8 +13,8 @@ const buttonVariants = cva(
     variants: {
       variant: {
         primary: 'bg-accent text-bg hover:bg-accent/85',
-        secondary: 'border border-rule bg-surface text-text-primary hover:accent-surface',
-        ghost: 'text-text-secondary hover:accent-surface hover:text-text-primary',
+        secondary: 'border border-rule bg-surface text-text-primary hover:bg-accent-surface',
+        ghost: 'text-text-secondary hover:bg-accent-surface hover:text-text-primary',
         danger: 'bg-destructive text-destructive-foreground hover:bg-destructive/85'
       },
       size: {
