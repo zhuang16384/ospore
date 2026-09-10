@@ -24,6 +24,7 @@
     "build": "pnpm run typecheck && electron-vite build",
     "postinstall": "electron-rebuild -f -w better-sqlite3",
     "build:unpack": "pnpm run build && electron-builder --dir",
+    "deploy:local": "bash scripts/deploy.sh",
     "build:win": "pnpm run build && electron-builder --win",
     "build:mac": "pnpm run build && electron-builder --mac",
     "build:linux": "pnpm run build && electron-builder --linux",

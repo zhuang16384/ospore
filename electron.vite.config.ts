@@ -31,6 +31,9 @@ export default defineConfig({
       }
     },
     plugins: [react(), tailwindcss()],
+    server: {
+      port: 5273
+    },
     build: {
       outDir: 'build-output/out/renderer',
       rollupOptions: {
