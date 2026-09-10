@@ -45,7 +45,7 @@ if [ ! -f "$TARGET_DIR/config/env" ]; then
 # Ospore runtime config (KEY=VALUE, sourced by `run`).
 # Deploy never overwrites this file.
 
-# Database location. Defaults to <runtime>/data — set to override.
+# App data location. Defaults to <runtime>/data — set to override.
 # OSPORE_DATA_DIR=
 EOF
 fi
