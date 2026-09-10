@@ -1,88 +1,75 @@
 /**
- * Main window shell: header (identity + breadcrumb + project switcher), global
- * error banner, and the two views (projects home / board). View switching is
- * store state, not routing — the app has exactly two screens and deep links
- * are out of scope for v0.1.
+ * Main window shell.
+ *
+ * v0 layout: header (identity + workspace path + open button), error banner,
+ * then a two-pane body — file tree on the left, document on the right. The
+ * right rail becomes the agent conversation in v0.1, so the horizontal split
+ * is already the final shape.
  */
 
 import { useEffect } from 'react'
-import { ArrowLeft, ChevronRight, CircleAlert, X } from 'lucide-react'
-import { useKanban } from '@renderer/stores/kanban'
-import { ErrorBoundary } from './components/ErrorBoundary'
-import { ProjectsPage } from './components/ProjectsPage'
-import { BoardPage } from './components/board/BoardPage'
+import { FolderOpen } from 'lucide-react'
+import { useFiles } from '@renderer/stores/files.store'
+import { useWorkspace } from '@renderer/stores/workspace.store'
+import { baseName } from '@renderer/lib/display'
 import { Button } from './components/ui/button'
+import { ErrorBoundary } from './components/ErrorBoundary'
+import { ErrorBanner } from './components/ErrorBanner'
+import { FileTree } from './components/files/FileTree'
+import { Welcome } from './components/files/Welcome'
+import { DocViewer } from './components/doc/DocViewer'
 
 export default function App(): JSX.Element {
-  const view = useKanban((s) => s.view)
-  const board = useKanban((s) => s.board)
-  const projects = useKanban((s) => s.projects)
+  const root = useWorkspace((s) => s.root)
+  const open = useWorkspace((s) => s.open)
 
   useEffect(() => {
-    void useKanban.getState().init()
+    void useWorkspace.getState().init()
   }, [])
+
+  // Relative paths only mean something inside one root, so the whole tree cache
+  // is dropped whenever the workspace changes.
+  useEffect(() => {
+    useFiles.getState().reset()
+  }, [root])
 
   return (
     <ErrorBoundary>
       <div className="flex h-full flex-col">
-        <header className="flex items-center gap-2 border-b border-rule px-4 py-2">
+        <header className="flex items-center gap-3 border-b border-rule px-4 py-2">
           <h1 className="text-small font-semibold uppercase tracking-widest text-text-secondary">
             Ospore
           </h1>
-          {view === 'board' && board && (
-            <nav className="flex items-center gap-2" aria-label="Breadcrumb">
-              <Button variant="ghost" size="sm" onClick={() => useKanban.getState().showProjects()}>
-                <ArrowLeft size={14} /> Projects
-              </Button>
-              <ChevronRight size={14} className="text-text-muted" />
-              <select
-                className="max-w-48 truncate rounded-md border border-rule bg-surface px-2 py-1 text-note text-text-primary focus-visible:outline-2 focus-visible:outline-accent"
-                value={board.project.id}
-                aria-label="Switch project"
-                data-testid="project-switcher"
-                onChange={(event) => void useKanban.getState().openProject(event.target.value)}
+          {root && (
+            <>
+              <span className="truncate text-small text-text-muted" title={root}>
+                {baseName(root)}
+              </span>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="ml-auto shrink-0"
+                onClick={() => void open()}
               >
-                {projects
-                  .filter((p) => !p.archived)
-                  .map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.name}
-                    </option>
-                  ))}
-              </select>
-            </nav>
+                <FolderOpen size={14} /> 打开目录
+              </Button>
+            </>
           )}
         </header>
 
         <ErrorBanner />
 
-        <main className="min-h-0 flex-1">
-          {view === 'projects' ? <ProjectsPage /> : <BoardPage />}
+        <main className="flex min-h-0 flex-1">
+          {root ? (
+            <>
+              <FileTree />
+              <DocViewer />
+            </>
+          ) : (
+            <Welcome />
+          )}
         </main>
       </div>
     </ErrorBoundary>
-  )
-}
-
-function ErrorBanner(): JSX.Element | null {
-  const error = useKanban((s) => s.error)
-  if (!error) return null
-  return (
-    <div
-      className="flex items-center gap-2 border-b border-destructive/40 bg-destructive/15 px-4 py-2 text-small"
-      role="alert"
-      data-testid="error-banner"
-    >
-      <CircleAlert size={14} className="shrink-0 text-destructive" />
-      <span className="flex-1">{error}</span>
-      <button
-        type="button"
-        className="shrink-0 text-text-secondary hover:text-text-primary"
-        aria-label="Dismiss error"
-        onClick={() => useKanban.getState().setError(null)}
-      >
-        <X size={14} />
-      </button>
-    </div>
   )
 }

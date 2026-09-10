@@ -1,45 +1,52 @@
 import { describe, expect, it, vi } from 'vitest'
-import { createOsporeAPI, type IPCRendererLike } from '../api'
 import { IpcEvents } from '@shared/ipc-events'
+import { createOsporeAPI, type IPCRendererLike } from '../api'
 
 /**
- * Bridge spot-checks, not exhaustive pass-through coverage: one method per
- * argument shape plus rejection propagation. The rest is typed glue.
+ * Bridge spot-checks, not exhaustive pass-through coverage: one call per
+ * channel plus rejection propagation. The rest is typed glue.
  */
 
+function makeRenderer(invoke = vi.fn().mockResolvedValue(undefined)): IPCRendererLike {
+  return { invoke, send: vi.fn(), on: vi.fn(), removeListener: vi.fn() }
+}
+
 describe('createOsporeAPI', () => {
-  it('read methods invoke their channel', async () => {
-    const invoke = vi.fn().mockResolvedValue([])
+  it('getWorkspace invokes its channel', async () => {
+    const invoke = vi.fn().mockResolvedValue({ root: null, recents: [] })
     const api = createOsporeAPI(makeRenderer(invoke))
 
-    await api.listProjects()
-    expect(invoke).toHaveBeenCalledWith(IpcEvents.PROJECT_LIST)
+    await api.getWorkspace()
+
+    expect(invoke).toHaveBeenCalledWith(IpcEvents.WORKSPACE_GET)
   })
 
-  it('mutation methods forward args on their channels', async () => {
-    const invoke = vi.fn().mockResolvedValue([])
+  it('openWorkspace forwards an optional path', async () => {
+    const invoke = vi.fn().mockResolvedValue({ root: '/ws', recents: [] })
     const api = createOsporeAPI(makeRenderer(invoke))
 
-    await api.createProject('Prototype')
-    expect(invoke).toHaveBeenCalledWith(IpcEvents.PROJECT_CREATE, 'Prototype')
+    await api.openWorkspace('/ws')
+    expect(invoke).toHaveBeenCalledWith(IpcEvents.WORKSPACE_OPEN, '/ws')
 
-    await api.moveCard('k1', 'c2', 3)
-    expect(invoke).toHaveBeenCalledWith(IpcEvents.CARD_MOVE, 'k1', 'c2', 3)
+    await api.openWorkspace()
+    expect(invoke).toHaveBeenLastCalledWith(IpcEvents.WORKSPACE_OPEN, undefined)
+  })
+
+  it('file methods forward the relative path', async () => {
+    const invoke = vi.fn().mockResolvedValue(undefined)
+    const api = createOsporeAPI(makeRenderer(invoke))
+
+    await api.listDirectory('docs')
+    expect(invoke).toHaveBeenCalledWith(IpcEvents.FILE_TREE, 'docs')
+
+    await api.readFile('docs/a.md')
+    expect(invoke).toHaveBeenCalledWith(IpcEvents.FILE_READ, 'docs/a.md')
   })
 
   it('propagates rejections from the main process', async () => {
-    const invoke = vi.fn().mockRejectedValue(new Error('Project not found: missing'))
+    const invoke = vi.fn().mockRejectedValue(new Error('No workspace is open'))
     const api = createOsporeAPI(makeRenderer(invoke))
 
-    await expect(api.getBoard('missing')).rejects.toThrow('Project not found: missing')
+    await expect(api.listDirectory('')).rejects.toThrow('No workspace is open')
   })
 })
-
-function makeRenderer(invoke: ReturnType<typeof vi.fn>): IPCRendererLike {
-  return {
-    invoke,
-    send: vi.fn(),
-    on: vi.fn(),
-    removeListener: vi.fn()
-  }
-}

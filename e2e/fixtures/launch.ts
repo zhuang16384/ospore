@@ -29,7 +29,15 @@ export interface OsporeApp {
 export async function launchOspore(dataDir: string): Promise<ElectronApplication> {
   const app = await _electron.launch({
     executablePath: electronPath,
-    args: [appRoot, ...(process.env.CI ? ['--no-sandbox', '--disable-gpu'] : [])],
+    // `--no-sandbox` is needed when the test process itself runs inside a
+    // restricted environment (CI containers, agent shells) where Chromium's
+    // sandbox cannot start.
+    //
+    // `--disable-gpu` is deliberately NOT passed: without a GPU process
+    // Chromium stops producing frames under Xvfb, so `requestAnimationFrame`
+    // never ticks and Playwright's actionability ("stable") check never
+    // satisfies — every click times out while the DOM looks perfectly fine.
+    args: [appRoot, ...(process.env.CI ? ['--no-sandbox'] : [])],
     env: { ...process.env, OSPORE_DATA_DIR: dataDir }
   })
   // Surface main-process crashes (e.g. a better-sqlite3 ABI mismatch) instead

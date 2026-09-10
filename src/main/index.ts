@@ -2,15 +2,16 @@ import { app } from 'electron'
 import { electronApp, optimizer } from '@electron-toolkit/utils'
 import { getOrCreateMainWindow } from './windows'
 import { ipcManager, setupIPC } from './ipc'
-import { closeDatabase, setupDatabase } from './db'
+import { createConfigStore } from './config/config.store'
+import { createWorkspaceService } from './workspace.service'
+import { resolveDataDir } from './paths'
 
 /**
  * Main-process entry.
  *
- * `main()` only wires lifecycle hooks; real assembly happens in `onReady`,
- * where each subsystem is a one-line `setupXxx()` call. Window creation is
- * delegated to `getOrCreateMainWindow()` so this file owns no BrowserWindow
- * logic.
+ * `onReady` is a short assembly script: each subsystem is one line, and the
+ * subsystems themselves know nothing about each other (the workspace service
+ * receives the config store, IPC receives the workspace service).
  */
 
 // On Linux, keep the session's native Ozone backend (Wayland or X11), but
@@ -55,11 +56,6 @@ process.on('unhandledRejection', (reason) => {
   console.error('[Ospore Main] Unhandled rejection:', reason)
 })
 
-// Flush the SQLite connection before the process goes away (WAL checkpoint).
-app.on('will-quit', () => {
-  closeDatabase()
-})
-
 // On macOS it's common to re-create a window when the dock icon is clicked.
 app.on('activate', () => {
   app.whenReady().then(() => getOrCreateMainWindow())
@@ -69,9 +65,9 @@ async function onReady(): Promise<void> {
   // Set app user model id for windows
   electronApp.setAppUserModelId('com.ospore.app')
 
-  // Each setupXxx() registers its own IPC handlers + initializes its own state.
-  const store = setupDatabase()
-  setupIPC(ipcManager, store)
+  const config = createConfigStore(resolveDataDir())
+  const workspace = createWorkspaceService(config)
+  setupIPC(ipcManager, workspace)
 
   await getOrCreateMainWindow()
 }

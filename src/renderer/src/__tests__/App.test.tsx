@@ -1,121 +1,116 @@
 // @vitest-environment jsdom
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import type { FileNode, RecentWorkspace, WorkspaceState } from '@shared/domain'
 import App from '../App'
-import { useKanban } from '../stores/kanban'
-import type { Board, Project } from '@shared/kanban'
+import { useFiles } from '../stores/files.store'
+import { useWorkspace } from '../stores/workspace.store'
 
-declare global {
-  interface Window {
-    ospore: {
-      listProjects: () => Promise<Project[]>
-      createProject: (name: string) => Promise<Project[]>
-      getBoard: (projectId: string) => Promise<Board>
-    }
-  }
-}
+const recents: RecentWorkspace[] = [{ path: '/repo', name: 'repo', lastOpenedAt: 1704067200 }]
 
-const projects: Project[] = [
-  {
-    id: 'p1',
-    name: 'Prototype',
-    archived: false,
-    createdAt: 1704067200,
-    updatedAt: 1704067200
-  },
-  {
-    id: 'p2',
-    name: 'Other',
-    archived: false,
-    createdAt: 1704153600,
-    updatedAt: 1704153600
-  }
+const rootChildren: FileNode[] = [
+  { name: 'docs', path: 'docs', kind: 'directory', openable: false },
+  { name: 'README.md', path: 'README.md', kind: 'file', openable: true },
+  { name: 'main.ts', path: 'main.ts', kind: 'file', openable: false }
 ]
 
-const board = (project: Project): Board => ({
-  project,
-  columns: [
-    {
-      id: 'c1',
-      projectId: project.id,
-      name: 'Backlog',
-      position: 0,
-      createdAt: project.createdAt,
-      updatedAt: project.updatedAt,
-      cards: []
-    }
-  ]
-})
+function mockApi(initial: WorkspaceState): void {
+  window.ospore = {
+    getWorkspace: vi.fn().mockResolvedValue(initial),
+    openWorkspace: vi.fn().mockResolvedValue(initial),
+    listDirectory: vi.fn().mockResolvedValue(rootChildren),
+    readFile: vi.fn().mockResolvedValue({ path: 'README.md', text: '# Hello' })
+  } as unknown as Window['ospore']
+}
 
-function resetStore(): void {
-  useKanban.setState({
-    view: 'projects',
-    loading: false,
-    error: null,
-    projects: [],
-    board: null,
-    draggingCardId: null,
-    editingCardId: null
+function resetStores(): void {
+  useWorkspace.setState({ root: null, recents: [], loading: false, error: null })
+  useFiles.setState({
+    children: {},
+    expanded: {},
+    loading: {},
+    doc: null,
+    docLoading: false,
+    error: null
   })
 }
 
 describe('App', () => {
   beforeEach(() => {
-    window.ospore = {
-      listProjects: vi.fn().mockResolvedValue(projects),
-      getBoard: vi
-        .fn()
-        .mockImplementation(async (projectId: string) =>
-          board(projects.find((p) => p.id === projectId) ?? projects[0])
-        ),
-      createProject: vi.fn().mockResolvedValue([...projects])
-    }
-    resetStore()
-  })
-
-  afterEach(() => {
     vi.restoreAllMocks()
+    resetStores()
   })
 
-  it('renders the app identity and loads projects on mount', async () => {
+  it('shows the welcome screen with recent workspaces when nothing is open', async () => {
+    mockApi({ root: null, recents })
+
     render(<App />)
-    expect(screen.getByText('Ospore')).toBeInTheDocument()
-    expect(window.ospore.listProjects).toHaveBeenCalled()
-    expect(await screen.findByText('Prototype')).toBeInTheDocument()
+
+    expect(await screen.findByTestId('open-workspace')).toBeInTheDocument()
+    expect(screen.getByTestId('recent-workspaces')).toBeInTheDocument()
+    expect(screen.getByText('repo')).toBeInTheDocument()
   })
 
-  it('creates a project from the home form', async () => {
+  it('hides the recent list when there is nothing to remember', async () => {
+    mockApi({ root: null, recents: [] })
+
     render(<App />)
-    await userEvent.type(await screen.findByLabelText('New project name'), 'Roadmap')
-    await userEvent.click(screen.getByRole('button', { name: 'Create project' }))
-    expect(window.ospore.createProject).toHaveBeenCalledWith('Roadmap')
+
+    await screen.findByTestId('open-workspace')
+    expect(screen.queryByTestId('recent-workspaces')).not.toBeInTheDocument()
   })
 
-  it('shows the empty state when no projects exist', async () => {
-    window.ospore = {
-      ...window.ospore,
-      listProjects: vi.fn().mockResolvedValue([])
-    }
+  it('opens the directory dialog on demand', async () => {
+    mockApi({ root: null, recents: [] })
     render(<App />)
-    expect(await screen.findByTestId('projects-empty')).toBeInTheDocument()
+
+    await userEvent.click(await screen.findByTestId('open-workspace'))
+
+    expect(window.ospore.openWorkspace).toHaveBeenCalledWith(undefined)
   })
 
-  it('board header offers a way back and direct project switching', async () => {
-    useKanban.setState({ view: 'board', projects, board: board(projects[0]) })
+  it('opens a remembered workspace without a dialog', async () => {
+    mockApi({ root: null, recents })
     render(<App />)
 
-    // Back button returns to the projects list.
-    await userEvent.click(screen.getByRole('button', { name: 'Projects' }))
-    expect(useKanban.getState().view).toBe('projects')
+    await userEvent.click(await screen.findByText('repo'))
 
-    // Dropdown switches boards without leaving the board view.
-    useKanban.setState({ view: 'board', board: board(projects[0]) })
-    const switcher = await screen.findByTestId('project-switcher')
-    await userEvent.selectOptions(switcher, 'p2')
+    expect(window.ospore.openWorkspace).toHaveBeenCalledWith('/repo')
+  })
 
-    expect(window.ospore.getBoard).toHaveBeenCalledWith('p2')
-    await waitFor(() => expect(useKanban.getState().board?.project.id).toBe('p2'))
-    expect(useKanban.getState().view).toBe('board')
+  it('renders the file tree and opens a markdown document', async () => {
+    mockApi({ root: '/repo', recents })
+
+    render(<App />)
+
+    await userEvent.click(await screen.findByText('README.md'))
+
+    expect(window.ospore.readFile).toHaveBeenCalledWith('README.md')
+    expect(await screen.findByText('# Hello')).toBeInTheDocument()
+  })
+
+  it('lists non-openable files but keeps them inert', async () => {
+    mockApi({ root: '/repo', recents })
+
+    render(<App />)
+
+    const sourceFile = await screen.findByText('main.ts')
+    expect(sourceFile.closest('button')).toBeDisabled()
+    await waitFor(() => expect(window.ospore.readFile).not.toHaveBeenCalled())
+  })
+
+  it('surfaces a failed read in the error banner', async () => {
+    mockApi({ root: '/repo', recents })
+    window.ospore.readFile = vi
+      .fn()
+      .mockRejectedValue(
+        new Error('File is too large to open (4096 KB)')
+      ) as unknown as Window['ospore']['readFile']
+
+    render(<App />)
+    await userEvent.click(await screen.findByText('README.md'))
+
+    expect(await screen.findByTestId('error-banner')).toHaveTextContent('File is too large')
   })
 })

@@ -1,5 +1,13 @@
 import { IpcEvents } from '@shared/ipc-events'
-import type { Board, CardChanges, Project } from '@shared/kanban'
+import type { FileContent, FileNode, WorkspaceState } from '@shared/domain'
+
+/**
+ * The bridge surface exposed to the renderer as `window.ospore`.
+ *
+ * Only wrapped methods are exposed — never `ipcRenderer` itself. v0 is
+ * read-only (four invoke channels); v0.1 adds agent channels plus `on()`
+ * subscriptions for streaming and file-change pushes.
+ */
 
 export interface IPCRendererLike {
   invoke(channel: string, ...args: unknown[]): Promise<unknown>
@@ -10,25 +18,14 @@ export interface IPCRendererLike {
 }
 
 export interface OsporeAPI {
-  // Projects — every mutation resolves with the full, re-ordered project list.
-  listProjects(): Promise<Project[]>
-  createProject(name: string): Promise<Project[]>
-  renameProject(id: string, name: string): Promise<Project[]>
-  setProjectArchived(id: string, archived: boolean): Promise<Project[]>
-  deleteProject(id: string): Promise<Project[]>
-
-  // Board + columns — mutations resolve with the full board snapshot.
-  getBoard(projectId: string): Promise<Board>
-  createColumn(projectId: string, name: string): Promise<Board>
-  renameColumn(columnId: string, name: string): Promise<Board>
-  deleteColumn(columnId: string): Promise<Board>
-  moveColumn(columnId: string, toIndex: number): Promise<Board>
-
-  // Cards — mutations resolve with the full board snapshot.
-  createCard(columnId: string, title: string, description?: string): Promise<Board>
-  updateCard(cardId: string, changes: CardChanges): Promise<Board>
-  deleteCard(cardId: string): Promise<Board>
-  moveCard(cardId: string, toColumnId: string, toIndex: number): Promise<Board>
+  /** Current workspace root + the recent-workspace list. */
+  getWorkspace(): Promise<WorkspaceState>
+  /** Open a workspace; omit `path` to show the native directory dialog. */
+  openWorkspace(path?: string): Promise<WorkspaceState>
+  /** Immediate children of a workspace-relative directory. */
+  listDirectory(relPath: string): Promise<FileNode[]>
+  /** Read a workspace-relative text file. */
+  readFile(relPath: string): Promise<FileContent>
 }
 
 export function createOsporeAPI(ipcRenderer: IPCRendererLike): OsporeAPI {
@@ -36,29 +33,10 @@ export function createOsporeAPI(ipcRenderer: IPCRendererLike): OsporeAPI {
     ipcRenderer.invoke(channel, ...args) as Promise<T>
 
   return {
-    listProjects: (): Promise<Project[]> => invoke(IpcEvents.PROJECT_LIST),
-    createProject: (name: string): Promise<Project[]> => invoke(IpcEvents.PROJECT_CREATE, name),
-    renameProject: (id: string, name: string): Promise<Project[]> =>
-      invoke(IpcEvents.PROJECT_RENAME, id, name),
-    setProjectArchived: (id: string, archived: boolean): Promise<Project[]> =>
-      invoke(IpcEvents.PROJECT_SET_ARCHIVED, id, archived),
-    deleteProject: (id: string): Promise<Project[]> => invoke(IpcEvents.PROJECT_DELETE, id),
-
-    getBoard: (projectId: string): Promise<Board> => invoke(IpcEvents.BOARD_GET, projectId),
-    createColumn: (projectId: string, name: string): Promise<Board> =>
-      invoke(IpcEvents.COLUMN_CREATE, projectId, name),
-    renameColumn: (columnId: string, name: string): Promise<Board> =>
-      invoke(IpcEvents.COLUMN_RENAME, columnId, name),
-    deleteColumn: (columnId: string): Promise<Board> => invoke(IpcEvents.COLUMN_DELETE, columnId),
-    moveColumn: (columnId: string, toIndex: number): Promise<Board> =>
-      invoke(IpcEvents.COLUMN_MOVE, columnId, toIndex),
-
-    createCard: (columnId: string, title: string, description?: string): Promise<Board> =>
-      invoke(IpcEvents.CARD_CREATE, columnId, title, description),
-    updateCard: (cardId: string, changes: CardChanges): Promise<Board> =>
-      invoke(IpcEvents.CARD_UPDATE, cardId, changes),
-    deleteCard: (cardId: string): Promise<Board> => invoke(IpcEvents.CARD_DELETE, cardId),
-    moveCard: (cardId: string, toColumnId: string, toIndex: number): Promise<Board> =>
-      invoke(IpcEvents.CARD_MOVE, cardId, toColumnId, toIndex)
+    getWorkspace: (): Promise<WorkspaceState> => invoke(IpcEvents.WORKSPACE_GET),
+    openWorkspace: (path?: string): Promise<WorkspaceState> =>
+      invoke(IpcEvents.WORKSPACE_OPEN, path),
+    listDirectory: (relPath: string): Promise<FileNode[]> => invoke(IpcEvents.FILE_TREE, relPath),
+    readFile: (relPath: string): Promise<FileContent> => invoke(IpcEvents.FILE_READ, relPath)
   }
 }
