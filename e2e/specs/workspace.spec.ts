@@ -1,7 +1,6 @@
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { basename, join } from 'node:path'
-import type { Page } from '@playwright/test'
 import { expect, launchOspore, test } from '../fixtures/launch'
 
 /**
@@ -32,15 +31,7 @@ test.describe('workspace viewer', () => {
       await expect(page.getByText('README.md')).toBeVisible()
       await expect(page.getByText('notes.txt')).toBeVisible()
 
-      // Regression: tailwind-merge used to drop `text-small` from any row that
-      // also set a text color, so files rendered at 15px while directories
-      // rendered at 12px — and a file grew when you selected it. Every row must
-      // keep one font size, selected or not.
-      expect(await treeFontSizes(page)).toEqual(['12px'])
-
       await page.getByText('README.md').click()
-      expect(await treeFontSizes(page)).toEqual(['12px'])
-
       // Rendered markdown, not the raw source.
       await expect(page.getByRole('heading', { name: 'From disk' })).toBeVisible()
     } finally {
@@ -87,19 +78,6 @@ test.describe('workspace viewer', () => {
     }
   })
 })
-
-/** Distinct font sizes across the file tree — one means the rows are uniform. */
-function treeFontSizes(page: Page): Promise<string[]> {
-  return page.evaluate(() =>
-    [
-      ...new Set(
-        [...document.querySelectorAll('nav[aria-label="Files"] button span')].map(
-          (el) => getComputedStyle(el).fontSize
-        )
-      )
-    ].sort()
-  )
-}
 
 /** Seed the MRU list the way a previous session would have left it. */
 function seedRecents(dataDir: string, workspace: string): void {

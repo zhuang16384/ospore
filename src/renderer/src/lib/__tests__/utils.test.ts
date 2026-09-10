@@ -36,9 +36,17 @@ describe('cn', () => {
  * reintroducing the bug.
  */
 describe('FONT_SIZE_TOKENS', () => {
-  it('lists every --text-* token declared in globals.css', () => {
+  it('lists every font size declared in the @theme block', () => {
     const css = readFileSync(new URL('../../styles/globals.css', import.meta.url), 'utf8')
-    const declared = [...css.matchAll(/^\s*--text-([a-z0-9-]+):/gm)].map((m) => m[1])
+
+    // Tailwind only turns a token into a `text-*` utility when it sits inside
+    // `@theme`. A size that drifts out to `:root` still exists as a CSS
+    // variable but compiles to no utility at all, so match the block, not the
+    // whole file.
+    const theme = css.match(/@theme[^{]*\{([\s\S]*?)\n\}/)?.[1] ?? ''
+    expect(theme, 'globals.css must declare an @theme block').not.toBe('')
+
+    const declared = [...theme.matchAll(/^\s*--text-([a-z0-9-]+):/gm)].map((m) => m[1])
 
     expect(declared.length).toBeGreaterThan(0)
     expect([...declared].sort()).toEqual([...FONT_SIZE_TOKENS].sort())
