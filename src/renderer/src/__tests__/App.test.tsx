@@ -20,7 +20,8 @@ function mockApi(initial: WorkspaceState): void {
     getWorkspace: vi.fn().mockResolvedValue(initial),
     openWorkspace: vi.fn().mockResolvedValue(initial),
     listDirectory: vi.fn().mockResolvedValue(rootChildren),
-    readFile: vi.fn().mockResolvedValue({ path: 'README.md', text: '# Hello' })
+    readFile: vi.fn().mockResolvedValue({ path: 'README.md', text: '# Hello' }),
+    openExternal: vi.fn()
   } as unknown as Window['ospore']
 }
 
@@ -87,7 +88,22 @@ describe('App', () => {
     await userEvent.click(await screen.findByText('README.md'))
 
     expect(window.ospore.readFile).toHaveBeenCalledWith('README.md')
-    expect(await screen.findByText('# Hello')).toBeInTheDocument()
+    // markdown is rendered, not echoed: '# Hello' becomes a heading
+    expect(await screen.findByRole('heading', { name: 'Hello' })).toBeInTheDocument()
+  })
+
+  it('hands external markdown links to the OS browser', async () => {
+    mockApi({ root: '/repo', recents })
+    window.ospore.readFile = vi.fn().mockResolvedValue({
+      path: 'README.md',
+      text: 'see [the site](https://example.com/docs)'
+    }) as unknown as Window['ospore']['readFile']
+
+    render(<App />)
+    await userEvent.click(await screen.findByText('README.md'))
+    await userEvent.click(await screen.findByRole('link', { name: 'the site' }))
+
+    expect(window.ospore.openExternal).toHaveBeenCalledWith('https://example.com/docs')
   })
 
   it('lists non-openable files but keeps them inert', async () => {

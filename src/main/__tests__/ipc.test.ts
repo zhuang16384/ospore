@@ -33,7 +33,7 @@ function makeWorkspace(root: string | null): WorkspaceService {
 }
 
 describe('setupIPC (v0)', () => {
-  it('registers exactly the four read-only channels', () => {
+  it('registers exactly the five read-only channels', () => {
     const { ipc, handlers } = makeIPC()
 
     setupIPC(ipc, makeWorkspace('/ws'))
@@ -43,7 +43,8 @@ describe('setupIPC (v0)', () => {
         IpcEvents.WORKSPACE_GET,
         IpcEvents.WORKSPACE_OPEN,
         IpcEvents.FILE_TREE,
-        IpcEvents.FILE_READ
+        IpcEvents.FILE_READ,
+        IpcEvents.OPEN_EXTERNAL
       ].sort()
     )
   })
@@ -99,5 +100,14 @@ describe('setupIPC (v0)', () => {
     setupIPC(ipc, makeWorkspace('/ws'))
 
     expect(() => handlers.get(IpcEvents.FILE_READ)?.({}, 42)).toThrow('Path must be a string')
+  })
+
+  it('opens only http(s) URLs externally', async () => {
+    const { ipc, handlers } = makeIPC()
+    setupIPC(ipc, makeWorkspace('/ws'))
+    const openExternal = handlers.get(IpcEvents.OPEN_EXTERNAL)!
+
+    await expect(openExternal({}, 'file:///etc/passwd')).rejects.toThrow('Only http(s) URLs')
+    await expect(openExternal({}, 'javascript:alert(1)')).rejects.toThrow('Only http(s) URLs')
   })
 })

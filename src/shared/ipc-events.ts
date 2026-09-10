@@ -17,7 +17,10 @@ export const IpcEvents = {
   /** Immediate children of a workspace-relative directory. */
   FILE_TREE: 'file:tree',
   /** Read a workspace-relative text file. */
-  FILE_READ: 'file:read'
+  FILE_READ: 'file:read',
+
+  /** Hand an http(s) URL to the OS browser. */
+  OPEN_EXTERNAL: 'shell:open-external'
 } as const
 
 export type IpcEvent = (typeof IpcEvents)[keyof typeof IpcEvents]

@@ -1,5 +1,6 @@
 import { ipcMain } from 'electron'
 import { registerFileHandlers } from './contexts/file-ipc'
+import { registerShellHandlers } from './contexts/shell-ipc'
 import { registerWorkspaceHandlers } from './contexts/workspace-ipc'
 import type { WorkspaceService } from './workspace.service'
 
@@ -30,4 +31,5 @@ export function setupIPC(
 ): void {
   registerWorkspaceHandlers(customIPCMain, workspace)
   registerFileHandlers(customIPCMain, workspace)
+  registerShellHandlers(customIPCMain)
 }

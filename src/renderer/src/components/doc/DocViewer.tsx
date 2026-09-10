@@ -1,14 +1,15 @@
 /**
  * Document pane — dispatches on file type.
  *
- * v0 currently renders raw text in both branches; the markdown renderer
- * (Phase 4) and the sandboxed html view (Phase 5) slot in behind the same
- * dispatch.
+ * Markdown scrolls inside the pane; html scrolls inside its own sandboxed
+ * iframe, so the two branches own their scrolling rather than the article.
  */
 
 import type { ReactNode } from 'react'
 import { extname } from '@renderer/lib/path'
 import { useFiles } from '@renderer/stores/files.store'
+import { HtmlView } from './HtmlView'
+import { MarkdownView } from './MarkdownView'
 
 export function DocViewer(): JSX.Element {
   const doc = useFiles((s) => s.doc)
@@ -21,19 +22,21 @@ export function DocViewer(): JSX.Element {
   const isHtml = extension === '.html' || extension === '.htm'
 
   return (
-    <article className="scrollbar-thin h-full flex-1 overflow-y-auto" data-testid="doc-viewer">
-      <header className="sticky top-0 z-10 border-b border-rule bg-bg/95 px-6 py-2 text-small text-text-muted backdrop-blur">
+    <article className="flex h-full min-w-0 flex-1 flex-col" data-testid="doc-viewer">
+      <header className="shrink-0 border-b border-rule px-6 py-2 text-small text-text-muted">
         {doc.path}
       </header>
-      {isHtml ? <RawText text={doc.text} /> : <RawText text={doc.text} />}
+      {isHtml ? (
+        <HtmlView path={doc.path} />
+      ) : (
+        <div className="scrollbar-thin min-h-0 flex-1 overflow-y-auto">
+          <MarkdownView text={doc.text} path={doc.path} />
+        </div>
+      )}
     </article>
   )
 }
 
 function Centered({ children }: { children: ReactNode }): JSX.Element {
   return <div className="flex flex-1 items-center justify-center text-text-muted">{children}</div>
-}
-
-function RawText({ text }: { text: string }): JSX.Element {
-  return <pre className="px-6 py-4 whitespace-pre-wrap font-sans text-note">{text}</pre>
 }

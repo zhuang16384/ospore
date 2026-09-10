@@ -4,6 +4,7 @@ import { getOrCreateMainWindow } from './windows'
 import { ipcManager, setupIPC } from './ipc'
 import { createConfigStore } from './config/config.store'
 import { createWorkspaceService } from './workspace.service'
+import { registerOsporeProtocol, registerOsporeScheme } from './protocol'
 import { resolveDataDir } from './paths'
 
 /**
@@ -34,6 +35,10 @@ if (process.platform === 'linux') {
   app.commandLine.appendSwitch('use-webgpu-adapter', 'opengles')
   app.commandLine.appendSwitch('disable-features', 'WaylandWpColorManagerV1')
 }
+
+// Chromium locks the custom-scheme registry at startup, so `ospore://` has to be
+// declared before the app is ready.
+registerOsporeScheme()
 
 // Default open or close DevTools by F12 in development and ignore
 // CommandOrControl + R in production.
@@ -67,6 +72,7 @@ async function onReady(): Promise<void> {
 
   const config = createConfigStore(resolveDataDir())
   const workspace = createWorkspaceService(config)
+  registerOsporeProtocol(workspace)
   setupIPC(ipcManager, workspace)
 
   await getOrCreateMainWindow()

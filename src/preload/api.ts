@@ -26,6 +26,8 @@ export interface OsporeAPI {
   listDirectory(relPath: string): Promise<FileNode[]>
   /** Read a workspace-relative text file. */
   readFile(relPath: string): Promise<FileContent>
+  /** Hand an http(s) URL to the OS browser. */
+  openExternal(url: string): Promise<void>
 }
 
 export function createOsporeAPI(ipcRenderer: IPCRendererLike): OsporeAPI {
@@ -37,6 +39,7 @@ export function createOsporeAPI(ipcRenderer: IPCRendererLike): OsporeAPI {
     openWorkspace: (path?: string): Promise<WorkspaceState> =>
       invoke(IpcEvents.WORKSPACE_OPEN, path),
     listDirectory: (relPath: string): Promise<FileNode[]> => invoke(IpcEvents.FILE_TREE, relPath),
-    readFile: (relPath: string): Promise<FileContent> => invoke(IpcEvents.FILE_READ, relPath)
+    readFile: (relPath: string): Promise<FileContent> => invoke(IpcEvents.FILE_READ, relPath),
+    openExternal: (url: string): Promise<void> => invoke(IpcEvents.OPEN_EXTERNAL, url)
   }
 }
