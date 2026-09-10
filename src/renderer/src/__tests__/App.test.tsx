@@ -84,6 +84,31 @@ describe('App', () => {
     expect(window.ospore.openWorkspace).toHaveBeenCalledWith('/repo')
   })
 
+  it('reloads the tree when another workspace is opened', async () => {
+    // Regression: switching workspaces cleared the tree cache but nothing
+    // refilled it, because the reload lived in FileTree's mount effect, which
+    // does not re-run when the root changes. The rail just went empty.
+    mockApi({ root: '/first', recents: [] })
+    const listDirectory = vi
+      .fn()
+      .mockResolvedValueOnce([{ name: 'one.md', path: 'one.md', kind: 'file', openable: true }])
+      .mockResolvedValueOnce([{ name: 'two.md', path: 'two.md', kind: 'file', openable: true }])
+    window.ospore.listDirectory = listDirectory as unknown as Window['ospore']['listDirectory']
+
+    render(<App />)
+    expect(await screen.findByText('one.md')).toBeInTheDocument()
+
+    window.ospore.openWorkspace = vi.fn().mockResolvedValue({
+      root: '/second',
+      recents: []
+    }) as unknown as Window['ospore']['openWorkspace']
+    await userEvent.click(screen.getByRole('button', { name: /open folder/i }))
+
+    expect(await screen.findByText('two.md')).toBeInTheDocument()
+    expect(screen.queryByText('one.md')).not.toBeInTheDocument()
+    expect(listDirectory).toHaveBeenCalledTimes(2)
+  })
+
   it('renders the file tree and opens a markdown document', async () => {
     mockApi({ root: '/repo', recents })
 

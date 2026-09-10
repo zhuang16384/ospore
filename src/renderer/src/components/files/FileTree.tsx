@@ -3,21 +3,18 @@
  *
  * One directory level per component instance; a directory's children render
  * only when it is expanded, matching the lazy loading in the store.
+ *
+ * Loading is not triggered here. The shell calls `loadWorkspace()` when the root
+ * changes, because that is the only place that knows both halves — dropping the
+ * cache and refilling it — happen together.
  */
 
-import { useEffect } from 'react'
 import { ChevronDown, ChevronRight, FileText } from 'lucide-react'
 import type { FileNode } from '@shared/domain'
 import { useFiles } from '@renderer/stores/files.store'
 import { cn } from '@renderer/lib/utils'
 
 export function FileTree(): JSX.Element {
-  const ensureLoaded = useFiles((s) => s.ensureLoaded)
-
-  useEffect(() => {
-    void ensureLoaded('')
-  }, [ensureLoaded])
-
   // The shell owns the rail's width; this just fills whatever box it is given.
   return (
     <nav aria-label="Files" className="scrollbar-thin h-full w-full overflow-y-auto py-1">

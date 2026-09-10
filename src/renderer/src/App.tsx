@@ -37,10 +37,11 @@ export default function App(): JSX.Element {
     void useLayout.getState().load()
   }, [])
 
-  // Relative paths only mean something inside one root, so the whole tree cache
-  // is dropped whenever the workspace changes.
+  // Relative paths only mean something inside one root, so a workspace switch
+  // has to drop the tree cache and reload it. `loadWorkspace` does both, which
+  // is what keeps it from leaving an empty tree behind (see files.store.ts).
   useEffect(() => {
-    useFiles.getState().reset()
+    if (root) void useFiles.getState().loadWorkspace()
   }, [root])
 
   return (

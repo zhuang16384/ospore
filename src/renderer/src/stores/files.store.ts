@@ -3,13 +3,26 @@
  *
  * The tree is loaded lazily, one directory at a time, and cached by directory
  * path — so expanding is free the second time and collapsing never throws the
- * listing away. `reset()` is called whenever the workspace root changes,
- * because relative paths are only meaningful within one root.
+ * listing away.
+ *
+ * Relative paths are only meaningful within one root, so switching workspaces
+ * has to drop the whole cache *and* reload: `loadWorkspace` does both, because
+ * splitting them is how the tree ended up empty after "Open Folder".
  */
 
 import { create } from 'zustand'
 import type { FileNode } from '@shared/domain'
 import { messageOf } from '@renderer/lib/errors'
+
+/**
+ * Bumped whenever the workspace changes.
+ *
+ * A directory listing that was requested under an older generation resolves
+ * against the *previous* root, so its answer is thrown away rather than written
+ * into the new cache. Without this, switching twice in quick succession can
+ * plant the old tree under the new root.
+ */
+let generation = 0
 
 interface FilesStore {
   /** Children per directory path ('' is the workspace root). */
@@ -23,6 +36,7 @@ interface FilesStore {
   docLoading: boolean
   error: string | null
 
+  loadWorkspace(): Promise<void>
   ensureLoaded(dirPath: string): Promise<void>
   toggle(dirPath: string): Promise<void>
   openDoc(path: string): Promise<void>
@@ -38,19 +52,39 @@ export const useFiles = create<FilesStore>()((set, get) => ({
   docLoading: false,
   error: null,
 
+  /**
+   * Point the tree at a new workspace root.
+   *
+   * One action on purpose: the cache has to be dropped and level 0 reloaded as
+   * a unit. Doing them from separate effects leaves a window where the cache is
+   * empty and nothing will ever refill it — and React runs child effects before
+   * parent ones, so a child-keyed reload would read the old cache and then be
+   * wiped by the parent's reset.
+   */
+  async loadWorkspace(): Promise<void> {
+    generation += 1
+    get().reset()
+    await get().ensureLoaded('')
+  },
+
   async ensureLoaded(dirPath: string): Promise<void> {
     if (get().children[dirPath]) return
+    const startedAt = generation
     set((state) => ({ loading: { ...state.loading, [dirPath]: true } }))
     try {
       const nodes = await window.ospore.listDirectory(dirPath)
+      if (startedAt !== generation) return
       set((state) => ({
         children: { ...state.children, [dirPath]: nodes },
         error: null
       }))
     } catch (error) {
+      if (startedAt !== generation) return
       set({ error: messageOf(error) })
     } finally {
-      set((state) => ({ loading: { ...state.loading, [dirPath]: false } }))
+      if (startedAt === generation) {
+        set((state) => ({ loading: { ...state.loading, [dirPath]: false } }))
+      }
     }
   },
 
