@@ -14,13 +14,15 @@ import { expect, launchOspore, test } from '../fixtures/launch'
 test.describe('workspace viewer', () => {
   test.slow() // two Electron launches (restart check) need more than the default 30s
 
-  test('restores a remembered workspace, lists files and opens a document', async () => {
+  test('restores a workspace, switches to another, and remembers both', async () => {
     const workspace = mkdtempSync(join(tmpdir(), 'ospore-e2e-workspace-'))
+    const other = mkdtempSync(join(tmpdir(), 'ospore-e2e-other-'))
     const dataDir = mkdtempSync(join(tmpdir(), 'ospore-e2e-data-'))
     writeFileSync(join(workspace, 'README.md'), '# From disk')
     mkdirSync(join(workspace, 'docs'))
     writeFileSync(join(workspace, 'docs', 'guide.md'), '# Guide')
     writeFileSync(join(workspace, 'notes.txt'), 'plain text')
+    writeFileSync(join(other, 'other.md'), '# Other workspace')
     seedRecents(dataDir, workspace)
 
     // Carried from the first launch to the restarted one.
@@ -38,6 +40,20 @@ test.describe('workspace viewer', () => {
       // Rendered markdown, not the raw source.
       await expect(page.getByRole('heading', { name: 'From disk' })).toBeVisible()
 
+      // Switch workspaces. The native picker is swapped for a fixed answer in
+      // the main process, then the real button is clicked — dropping the tree
+      // cache and refilling it used to live in different components, so a
+      // second "Open Folder" left the rail empty and no unit test can see the
+      // dialog-to-store hop.
+      await app.evaluate(({ dialog }, target) => {
+        dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [target] })
+      }, other)
+      await page.getByRole('button', { name: /open folder/i }).click()
+
+      await expect(page.getByText('other.md')).toBeVisible()
+      await expect(page.getByText('README.md')).toHaveCount(0)
+      await expect(page.getByText('Select a document on the left')).toBeVisible()
+
       // Resize the rail. The width has to survive a restart, which is the only
       // part of this that needs a real config.json and a real round trip.
       const rail = page.getByRole('navigation', { name: 'Files' })
@@ -53,12 +69,13 @@ test.describe('workspace viewer', () => {
       await app.close()
     }
 
-    // Restart against the same data dir and workspace: everything is still there.
+    // Restart: the switched-to workspace is the one that comes back, and the
+    // rail is the width it was left at.
     const restarted = await launchOspore(dataDir)
     try {
       const page = await restarted.firstWindow()
-      await page.getByText('README.md').click()
-      await expect(page.getByRole('heading', { name: 'From disk' })).toBeVisible()
+      await page.getByText('other.md').click()
+      await expect(page.getByRole('heading', { name: 'Other workspace' })).toBeVisible()
 
       const rail = page.getByRole('navigation', { name: 'Files' })
       await expect
@@ -67,6 +84,7 @@ test.describe('workspace viewer', () => {
     } finally {
       await restarted.close()
       rmSync(workspace, { recursive: true, force: true })
+      rmSync(other, { recursive: true, force: true })
       rmSync(dataDir, { recursive: true, force: true })
     }
   })
