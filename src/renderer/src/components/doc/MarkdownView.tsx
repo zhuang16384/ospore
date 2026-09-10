@@ -8,6 +8,11 @@
  *
  * Remote images are deliberately **not** fetched — v0 does not touch the
  * network, so `![alt](https://…)` renders as its alt text instead.
+ *
+ * The outer element is the themed reading surface (Dracula, see the "Markdown
+ * theme" block in styles/globals.css) and the inner one is the prose measure.
+ * They are separate so the surface fills the pane while the text stays at a
+ * readable width.
  */
 
 import type { ReactNode } from 'react'
@@ -19,21 +24,23 @@ import { useFiles } from '@renderer/stores/files.store'
 
 export function MarkdownView({ text, path }: { text: string; path: string }): JSX.Element {
   return (
-    <div className="prose prose-invert max-w-3xl px-6 py-4">
-      <Markdown
-        remarkPlugins={[remarkGfm]}
-        rehypePlugins={[rehypeHighlight]}
-        components={{
-          a: ({ href, children }) => (
-            <MarkdownLink href={href} docPath={path}>
-              {children}
-            </MarkdownLink>
-          ),
-          img: ({ src, alt }) => <MarkdownImage src={src} alt={alt} docPath={path} />
-        }}
-      >
-        {text}
-      </Markdown>
+    <div className="doc-dracula min-h-full" data-testid="markdown-view">
+      <div className="prose prose-invert max-w-3xl px-6 py-4">
+        <Markdown
+          remarkPlugins={[remarkGfm]}
+          rehypePlugins={[rehypeHighlight]}
+          components={{
+            a: ({ href, children }) => (
+              <MarkdownLink href={href} docPath={path}>
+                {children}
+              </MarkdownLink>
+            ),
+            img: ({ src, alt }) => <MarkdownImage src={src} alt={alt} docPath={path} />
+          }}
+        >
+          {text}
+        </Markdown>
+      </div>
     </div>
   )
 }

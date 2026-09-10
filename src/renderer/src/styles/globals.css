@@ -75,6 +75,27 @@
   --font-small: 12px;
 
   /*
+   * Dracula palette — https://draculatheme.com/spec
+   *
+   * Only the markdown reading surface uses these; the app chrome keeps its own
+   * cool-neutral tokens above. Stored as raw palette values rather than roles so
+   * the mapping decisions live in one place (see "Markdown theme" below) and a
+   * second document theme can sit beside this without re-deriving colours.
+   */
+  --dracula-bg: #282a36;
+  --dracula-bg-raised: #21222c; /* nested surfaces (code blocks); the ports' darker chrome shade */
+  --dracula-line: #44475a; /* selection / current line — rules and table borders */
+  --dracula-fg: #f8f8f2;
+  --dracula-comment: #6272a4;
+  --dracula-cyan: #8be9fd;
+  --dracula-green: #50fa7b;
+  --dracula-orange: #ffb86c;
+  --dracula-pink: #ff79c6;
+  --dracula-purple: #bd93f9;
+  --dracula-red: #ff5555;
+  --dracula-yellow: #f1fa8c;
+
+  /*
    * shadcn/ui component tokens. Ospore is dark-only (no light theme), so
    * these are defined once here rather than under a .dark variant, and
    * point back at the --color-* tokens above rather than duplicating raw
@@ -127,5 +148,114 @@
     font-size: var(--font-note);
     line-height: 1.6;
     -webkit-font-smoothing: antialiased;
+  }
+}
+
+/*
+ * Markdown theme: Dracula.
+ *
+ * Tailwind Typography publishes its dark palette into `--tw-prose-invert-*` and
+ * `.prose-invert` maps those onto the `--tw-prose-*` slots it consumes, so the
+ * overrides go into the `-invert-` names. `.doc-dracula .prose` is a two-class
+ * selector on purpose: it has to beat `.prose` (and `.prose-invert`) no matter
+ * which order Tailwind emits them in. Both rules live in the utilities layer,
+ * where `prose` itself lives, so the layer order cannot be the deciding factor.
+ *
+ * Role choices (body, headings, links, ...) are this theme's decisions — the
+ * Dracula project specifies a syntax palette, not markdown prose. The syntax
+ * mapping below is their official highlight.js theme
+ * (github.com/dracula/highlightjs). highlight.js's own bundled
+ * `base16/dracula.css` is a different, non-classic palette and is deliberately
+ * not used.
+ */
+@layer utilities {
+  .doc-dracula {
+    background-color: var(--dracula-bg);
+    color: var(--dracula-fg);
+  }
+
+  .doc-dracula .prose {
+    --tw-prose-invert-body: var(--dracula-fg);
+    --tw-prose-invert-lead: var(--dracula-comment);
+    --tw-prose-invert-headings: var(--dracula-pink);
+    --tw-prose-invert-links: var(--dracula-cyan);
+    --tw-prose-invert-bold: var(--dracula-orange);
+    --tw-prose-invert-counters: var(--dracula-comment);
+    --tw-prose-invert-bullets: var(--dracula-comment);
+    --tw-prose-invert-hr: var(--dracula-line);
+    --tw-prose-invert-quotes: var(--dracula-comment);
+    --tw-prose-invert-quote-borders: var(--dracula-purple);
+    --tw-prose-invert-captions: var(--dracula-comment);
+    --tw-prose-invert-code: var(--dracula-green);
+    --tw-prose-invert-pre-code: var(--dracula-fg);
+    --tw-prose-invert-pre-bg: var(--dracula-bg-raised);
+    --tw-prose-invert-th-borders: var(--dracula-line);
+    --tw-prose-invert-td-borders: var(--dracula-line);
+    --tw-prose-invert-kbd: var(--dracula-fg);
+    --tw-prose-invert-kbd-shadows: color-mix(in srgb, var(--dracula-fg) 10%, transparent);
+  }
+
+  /* Syntax highlighting, scoped to the themed document. */
+  .doc-dracula .hljs,
+  .doc-dracula .hljs-subst {
+    color: var(--dracula-fg);
+  }
+
+  .doc-dracula .hljs-built_in,
+  .doc-dracula .hljs-selector-tag,
+  .doc-dracula .hljs-section,
+  .doc-dracula .hljs-link {
+    color: var(--dracula-cyan);
+  }
+
+  .doc-dracula .hljs-keyword {
+    color: var(--dracula-pink);
+  }
+
+  .doc-dracula .hljs-title,
+  .doc-dracula .hljs-attr,
+  .doc-dracula .hljs-meta-keyword {
+    color: var(--dracula-green);
+    font-style: italic;
+  }
+
+  .doc-dracula .hljs-string,
+  .doc-dracula .hljs-meta,
+  .doc-dracula .hljs-name,
+  .doc-dracula .hljs-type,
+  .doc-dracula .hljs-symbol,
+  .doc-dracula .hljs-bullet,
+  .doc-dracula .hljs-addition,
+  .doc-dracula .hljs-variable,
+  .doc-dracula .hljs-template-tag,
+  .doc-dracula .hljs-template-variable {
+    color: var(--dracula-yellow);
+  }
+
+  .doc-dracula .hljs-comment,
+  .doc-dracula .hljs-quote,
+  .doc-dracula .hljs-deletion {
+    color: var(--dracula-comment);
+  }
+
+  .doc-dracula .hljs-literal,
+  .doc-dracula .hljs-number {
+    color: var(--dracula-purple);
+  }
+
+  .doc-dracula .hljs-emphasis {
+    font-style: italic;
+  }
+
+  .doc-dracula .hljs-keyword,
+  .doc-dracula .hljs-selector-tag,
+  .doc-dracula .hljs-literal,
+  .doc-dracula .hljs-title,
+  .doc-dracula .hljs-section,
+  .doc-dracula .hljs-doctag,
+  .doc-dracula .hljs-type,
+  .doc-dracula .hljs-name,
+  .doc-dracula .hljs-strong {
+    font-weight: bold;
   }
 }
