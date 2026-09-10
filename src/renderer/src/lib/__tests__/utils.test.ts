@@ -33,7 +33,8 @@ describe('cn', () => {
 /**
  * The token list is hand-written, so make sure adding `--text-*` to the
  * stylesheet without registering it here fails loudly instead of silently
- * reintroducing the bug.
+ * reintroducing the bug. `FileTree.browser.test.tsx` covers the other half —
+ * that a token actually compiles and renders at the right size.
  */
 describe('FONT_SIZE_TOKENS', () => {
   it('lists every font size declared in the @theme block', () => {

@@ -53,6 +53,10 @@ coverage/
 *.lcov
 .nyc_output
 
+# Playwright and vitest browser mode both write failure screenshots here
+__screenshots__/
+.vitest-attachments/
+
 # Local test database (OSPORE_DATA_DIR target for manual testing)
 /.test-data/
 

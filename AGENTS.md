@@ -21,6 +21,18 @@ changing behaviour.
 ## Checks
 
 `pnpm typecheck && pnpm lint && pnpm test` before every commit.
+
+`pnpm test` runs two lanes, split by file name:
+
+- `*.test.ts(x)` — node, with per-file `@vitest-environment jsdom` opt-in.
+- `*.browser.test.tsx` — real Chromium via `@vitest/browser-playwright`.
+
+Push an assertion down to the cheapest lane that can see it. jsdom applies no
+stylesheet, so computed size, layout and colour are invisible there — those go in
+the browser lane, which costs about a second and does not need a build. Reach for
+E2E only when the assertion genuinely needs the packaged app (protocol serving, an
+iframe sandbox, a restart).
+
 E2E drives the **built** app (`build-output/out`), so always go through `pnpm e2e`
 — its `pree2e` hook rebuilds first. That also needs a compositing display; on a
 headless or restricted shell run `CI=1 xvfb-run -a pnpm e2e`

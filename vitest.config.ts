@@ -1,9 +1,21 @@
 import { defineConfig } from 'vitest/config'
 import { resolve } from 'path'
 import react from '@vitejs/plugin-react'
+import tailwindcss from '@tailwindcss/vite'
+import { playwright } from '@vitest/browser-playwright'
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), tailwindcss()],
+  /*
+   * Browser-mode tests render through Vite's dependency optimizer. If `react`
+   * and `react-dom` are optimised separately they end up as two module
+   * instances, the hooks dispatcher is null, and every render dies with
+   * "Cannot read properties of null (reading 'useEffect')". Listing them
+   * together keeps one copy.
+   */
+  optimizeDeps: {
+    include: ['react', 'react-dom', 'react-dom/client', 'react/jsx-dev-runtime']
+  },
   resolve: {
     alias: {
       '@main': resolve('src/main'),
@@ -14,19 +26,51 @@ export default defineConfig({
   },
   test: {
     globals: true,
-    // renderer tests opt into jsdom via per-file `@vitest-environment jsdom`;
-    // main/preload tests use the default `node` environment.
-    include: ['src/**/*.{test,spec}.{ts,tsx}'],
     setupFiles: ['src/renderer/src/test-setup.ts'],
-    coverage: {
-      provider: 'v8',
-      include: [
-        'src/main/**/*.ts',
-        'src/preload/**/*.ts',
-        'src/renderer/src/**',
-        'src/shared/**/*.ts'
-      ],
-      exclude: ['src/**/__tests__/**', 'src/main/index.ts', 'src/main/windows.ts']
-    }
+    /*
+     * Two lanes, split by file name so both run under a plain `pnpm test`:
+     *
+     * - `unit` is node with per-file `@vitest-environment jsdom` opt-in.
+     * - `browser` runs the same components in real Chromium. jsdom applies no
+     *   stylesheet at all, so anything about computed size, layout or colour is
+     *   invisible to it — see FileTree.browser.test.tsx. This replaces an e2e
+     *   assertion that needed a whole Electron launch for one font size.
+     *
+     * The tailwind plugin is registered here so `?inline` CSS imports in the
+     * browser lane compile the real stylesheet rather than a stub.
+     */
+    projects: [
+      {
+        extends: true,
+        test: {
+          name: 'unit',
+          include: ['src/**/*.{test,spec}.{ts,tsx}'],
+          exclude: ['src/**/*.browser.test.{ts,tsx}'],
+          coverage: {
+            provider: 'v8',
+            include: [
+              'src/main/**/*.ts',
+              'src/preload/**/*.ts',
+              'src/renderer/src/**',
+              'src/shared/**/*.ts'
+            ],
+            exclude: ['src/**/__tests__/**', 'src/main/index.ts', 'src/main/windows.ts']
+          }
+        }
+      },
+      {
+        extends: true,
+        test: {
+          name: 'browser',
+          include: ['src/**/*.browser.test.{ts,tsx}'],
+          browser: {
+            enabled: true,
+            headless: true,
+            provider: playwright(),
+            instances: [{ browser: 'chromium' }]
+          }
+        }
+      }
+    ]
   }
 })
