@@ -19,17 +19,19 @@ export function Welcome(): JSX.Element {
     <div className="mx-auto flex max-w-lg flex-col items-center gap-6 self-center p-8">
       <div className="text-center">
         <h1 className="text-lg font-semibold tracking-tight">Ospore</h1>
-        <p className="mt-1 text-text-secondary">打开一个目录，查看里面的 markdown 与 html 文档。</p>
+        <p className="mt-1 text-text-secondary">
+          Open a directory to read the markdown and html documents inside.
+        </p>
       </div>
 
       <Button variant="primary" onClick={() => void open()} data-testid="open-workspace">
-        <FolderOpen size={14} /> 打开目录…
+        <FolderOpen size={14} /> Open Folder…
       </Button>
 
       {recents.length > 0 && (
         <section className="w-full" data-testid="recent-workspaces">
           <h2 className="mb-2 flex items-center gap-1.5 text-small uppercase tracking-widest text-text-muted">
-            <History size={13} /> 最近打开
+            <History size={13} /> Recent
           </h2>
           <ul className="space-y-1">
             {recents.map((recent) => (

@@ -14,8 +14,8 @@ export function DocViewer(): JSX.Element {
   const doc = useFiles((s) => s.doc)
   const docLoading = useFiles((s) => s.docLoading)
 
-  if (docLoading) return <Centered>加载中…</Centered>
-  if (!doc) return <Centered>从左侧选择一篇文档</Centered>
+  if (docLoading) return <Centered>Loading…</Centered>
+  if (!doc) return <Centered>Select a document on the left</Centered>
 
   const extension = extname(doc.path)
   const isHtml = extension === '.html' || extension === '.htm'

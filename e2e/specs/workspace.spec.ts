@@ -34,7 +34,7 @@ test.describe('workspace viewer', () => {
     try {
       const page = await app.firstWindow()
 
-      await expect(page.getByText('从左侧选择一篇文档')).toBeVisible()
+      await expect(page.getByText('Select a document on the left')).toBeVisible()
       await expect(page.getByText('README.md')).toBeVisible()
       await expect(page.getByText('notes.txt')).toBeVisible()
 

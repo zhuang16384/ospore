@@ -36,7 +36,7 @@ linux:
     - deb
   maintainer: electronjs.org
   category: Utility
-  # 本地开发默认就跑当前机器架构（host arch），无需显式指定
+  # Local builds default to the host architecture, so no explicit target is needed
 appImage:
   artifactName: ${name}-${version}.${ext}
 npmRebuild: false

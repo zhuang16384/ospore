@@ -51,7 +51,7 @@ export default function App(): JSX.Element {
                 className="ml-auto shrink-0"
                 onClick={() => void open()}
               >
-                <FolderOpen size={14} /> 打开目录
+                <FolderOpen size={14} /> Open Folder
               </Button>
             </>
           )}

@@ -30,7 +30,7 @@ function FileTreeLevel({ dirPath, depth }: { dirPath: string; depth: number }): 
   if (!children) return null
 
   if (children.length === 0) {
-    return <p className="px-3 py-1 text-small text-text-muted">（空目录）</p>
+    return <p className="px-3 py-1 text-small text-text-muted">(empty)</p>
   }
 
   return (
@@ -82,7 +82,7 @@ function FileRow({ node, depth }: { node: FileNode; depth: number }): JSX.Elemen
     <button
       type="button"
       disabled={!node.openable}
-      title={node.openable ? node.path : 'v0 只能查看 markdown / html'}
+      title={node.openable ? node.path : 'Only markdown and html can be opened in v0'}
       className={cn(
         'flex w-full items-center gap-1 rounded-sm py-1 text-left text-small',
         node.openable ? 'hover:accent-surface' : 'cursor-default text-text-muted',
