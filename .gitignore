@@ -1,57 +1,33 @@
+# Dependencies
+node_modules/
+.pnpm-debug-log*
+
 # Logs
 logs
 *.log
 npm-debug.log*
 yarn-debug.log*
 pnpm-debug.log*
-lerna-debug.log*
-
-# Dependency directories
-node_modules/
-jspm_packages/
-.pnpm-debug-log*
-.eslintcache
-
-# Build outputs
-dist/
-dist-ssr/
-release/
-build/release/
-*.out
-*.exe
-*.app
-*.ipa
-*.dmg
 
 # Build outputs: electron-vite, electron-builder, and Playwright all write under one
 # directory so editors only need to hide a single path
 /build-output/
 
-# IDEs and Editors
-.vscode/
-.idea/
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-*.sw?
-.history/
-
-# OS Files
-.DS_Store
-.DS_Store?
-._*
-Thumbs.db
-desktop.ini
+# Fallbacks if a tool ever runs with default paths (electron-builder defaults to dist/)
+dist/
+release/
 
 # TypeScript
 *.tsbuildinfo
-*.next
 
 # Testing
 coverage/
 *.lcov
-.nyc_output
+
+# Playwright's default report/results dirs. The config redirects both into
+# build-output/, but keep them so a run with default paths cannot dirty the tree
+playwright-report/
+test-results/
 
 # Playwright and vitest browser mode both write failure screenshots here
 __screenshots__/
@@ -60,18 +36,30 @@ __screenshots__/
 # Local test database (OSPORE_DATA_DIR target for manual testing)
 /.test-data/
 
+# Transient config bundles from vite/vitest; linger in the root if a run is killed
+*.timestamp-*.mjs
+
+# Tool caches
+.eslintcache
+.vite/
+.electron-builder/
+.electron-vite/
+
 # Env files
 .env
 .env.*
 !.env.example
 
-# Electron / Vite
-.electron-builder/
-.electron-vite/
-.vite/
+# IDEs and editors
+.vscode/
+.idea/
+*.sw?
 
-# System
+# OS files
+.DS_Store
+._*
 [Tt]humbs.db
+desktop.ini
 
 # Security
 *.pem
