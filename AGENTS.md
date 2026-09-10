@@ -33,7 +33,13 @@ the browser lane, which costs about a second and does not need a build. Reach fo
 E2E only when the assertion genuinely needs the packaged app (protocol serving, an
 iframe sandbox, a restart).
 
-E2E drives the **built** app (`build-output/out`), so always go through `pnpm e2e`
-— its `pree2e` hook rebuilds first. That also needs a compositing display; on a
-headless or restricted shell run `CI=1 xvfb-run -a pnpm e2e`
-(`CI=1` adds `--no-sandbox`, which those environments require).
+## E2E
+
+E2E is **not** part of `pnpm test` — it is the slow, whole-app layer. It gates the
+deploy instead: `scripts/deploy.sh` runs `pnpm e2e` before packaging anything, so
+`pnpm deploy:local` fails on a red suite. `OSPORE_SKIP_E2E=1` bypasses the gate.
+
+Run it by hand with `pnpm e2e`. `scripts/e2e.sh` picks the display: the session's
+when there is one, `xvfb-run` with `CI=1` and no `WAYLAND_DISPLAY` when there is
+not. E2E drives the **built** app (`build-output/out`), so `pree2e` rebuilds
+first — never call `playwright test` directly.
