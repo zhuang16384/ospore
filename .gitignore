@@ -69,5 +69,7 @@ desktop.ini
 *.p12
 *.pfx
 
-# Project documentation & runtime logs (kept local, not tracked)
+# Kept local, not tracked (docs are the local source of truth; AGENTS.md is
+# the agent conventions file)
 /docs/
+/AGENTS.md
