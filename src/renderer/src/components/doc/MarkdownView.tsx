@@ -9,6 +9,14 @@
  * Remote images are deliberately **not** fetched — v0 does not touch the
  * network, so `![alt](https://…)` renders as its alt text instead.
  *
+ * The `cjk-friendly` plugins fix a CommonMark rule that bites every Chinese
+ * document in this repo. A `**` whose inside neighbour is punctuation and whose
+ * outside neighbour is a letter cannot open emphasis, so `是**「编码产能」**；`
+ * rendered its asterisks literally and let the next `**` pair with the one after
+ * it, bolding the wrong span. Order matters: both must follow `remarkGfm`
+ * (the strikethrough one will not work before it). See
+ * `__tests__/MarkdownView.test.tsx`.
+ *
  * The outer element is the themed reading surface (Dracula, see the "Markdown
  * theme" block in styles/globals.css) and the inner one is the prose measure.
  * They are separate so the surface fills the pane while the text stays at a
@@ -18,6 +26,8 @@
 import type { ReactNode } from 'react'
 import Markdown from 'react-markdown'
 import rehypeHighlight from 'rehype-highlight'
+import remarkCjkFriendly from 'remark-cjk-friendly'
+import remarkCjkFriendlyGfmStrikethrough from 'remark-cjk-friendly-gfm-strikethrough'
 import remarkGfm from 'remark-gfm'
 import { resolveMarkdownHref } from '@renderer/lib/markdown-links'
 import { useFiles } from '@renderer/stores/files.store'
@@ -27,7 +37,7 @@ export function MarkdownView({ text, path }: { text: string; path: string }): JS
     <div className="doc-dracula min-h-full" data-testid="markdown-view">
       <div className="prose prose-invert max-w-3xl px-6 py-4">
         <Markdown
-          remarkPlugins={[remarkGfm]}
+          remarkPlugins={[remarkGfm, remarkCjkFriendly, remarkCjkFriendlyGfmStrikethrough]}
           rehypePlugins={[rehypeHighlight]}
           components={{
             a: ({ href, children }) => (
