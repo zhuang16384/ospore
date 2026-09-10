@@ -21,6 +21,7 @@ import {
 } from 'node:fs'
 import { basename, join } from 'node:path'
 import { MAX_RECENT_WORKSPACES, type RecentWorkspace } from '@shared/domain'
+import { DEFAULT_LAYOUT, normalizeLayout, type LayoutPreferences } from '@shared/layout'
 import { unixSecondsNow } from '@shared/time'
 
 const CONFIG_FILE_NAME = 'config.json'
@@ -30,6 +31,8 @@ const CONFIG_VERSION = 1
 export interface OsporeConfig {
   version: number
   recentWorkspaces: RecentWorkspace[]
+  /** Pane geometry. Optional fields default rather than invalidating the file. */
+  layout: LayoutPreferences
 }
 
 export interface ConfigStore {
@@ -37,11 +40,17 @@ export interface ConfigStore {
   read(): OsporeConfig
   /** Move `path` to the front of the MRU list and persist. */
   rememberWorkspace(path: string): OsporeConfig
+  /** Replace the layout preferences and persist. */
+  setLayout(layout: LayoutPreferences): OsporeConfig
 }
 
 export function createConfigStore(dataDir: string): ConfigStore {
   const file = join(dataDir, CONFIG_FILE_NAME)
-  const empty = (): OsporeConfig => ({ version: CONFIG_VERSION, recentWorkspaces: [] })
+  const empty = (): OsporeConfig => ({
+    version: CONFIG_VERSION,
+    recentWorkspaces: [],
+    layout: { ...DEFAULT_LAYOUT }
+  })
 
   function write(config: OsporeConfig): void {
     mkdirSync(dataDir, { recursive: true })
@@ -79,26 +88,43 @@ export function createConfigStore(dataDir: string): ConfigStore {
 
     return {
       version: CONFIG_VERSION,
+      layout: parsed.layout,
       recentWorkspaces: parsed.recentWorkspaces.filter((entry) => isExistingDirectory(entry.path))
     }
   }
 
   function rememberWorkspace(path: string): OsporeConfig {
+    const current = read()
     const entry: RecentWorkspace = {
       path,
       name: basename(path),
       lastOpenedAt: unixSecondsNow()
     }
-    const next = [entry, ...read().recentWorkspaces.filter((item) => item.path !== path)].slice(
-      0,
-      MAX_RECENT_WORKSPACES
-    )
-    const config: OsporeConfig = { version: CONFIG_VERSION, recentWorkspaces: next }
+    const config: OsporeConfig = {
+      version: CONFIG_VERSION,
+      // Opening a workspace must not forget how the window was laid out.
+      layout: current.layout,
+      recentWorkspaces: [
+        entry,
+        ...current.recentWorkspaces.filter((item) => item.path !== path)
+      ].slice(0, MAX_RECENT_WORKSPACES)
+    }
     write(config)
     return config
   }
 
-  return { read, rememberWorkspace }
+  function setLayout(layout: LayoutPreferences): OsporeConfig {
+    const current = read()
+    const config: OsporeConfig = {
+      version: CONFIG_VERSION,
+      layout: normalizeLayout(layout),
+      recentWorkspaces: current.recentWorkspaces
+    }
+    write(config)
+    return config
+  }
+
+  return { read, rememberWorkspace, setLayout }
 }
 
 /** Parse and validate an unknown document; null means "corrupt, start over". */
@@ -125,7 +151,13 @@ function parseConfig(raw: string): OsporeConfig | null {
       lastOpenedAt: typeof lastOpenedAt === 'number' ? lastOpenedAt : 0
     })
   }
-  return { version: CONFIG_VERSION, recentWorkspaces }
+  // A missing or malformed `layout` is not corruption — it is a config written
+  // before the field existed, or by hand. Default it rather than starting over.
+  return {
+    version: CONFIG_VERSION,
+    layout: normalizeLayout((value as { layout?: unknown }).layout),
+    recentWorkspaces
+  }
 }
 
 function isExistingDirectory(path: string): boolean {

@@ -3,6 +3,7 @@ import { electronApp, optimizer } from '@electron-toolkit/utils'
 import { getOrCreateMainWindow } from './windows'
 import { ipcManager, setupIPC } from './ipc'
 import { createConfigStore } from './config/config.store'
+import { createPreferencesService } from './preferences.service'
 import { createWorkspaceService } from './workspace.service'
 import { registerOsporeProtocol, registerOsporeScheme } from './protocol'
 import { resolveDataDir } from './paths'
@@ -72,8 +73,9 @@ async function onReady(): Promise<void> {
 
   const config = createConfigStore(resolveDataDir())
   const workspace = createWorkspaceService(config)
+  const preferences = createPreferencesService(config)
   registerOsporeProtocol(workspace)
-  setupIPC(ipcManager, workspace)
+  setupIPC(ipcManager, workspace, preferences)
 
   await getOrCreateMainWindow()
 }

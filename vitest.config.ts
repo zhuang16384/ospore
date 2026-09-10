@@ -67,6 +67,10 @@ export default defineConfig({
             enabled: true,
             headless: true,
             provider: playwright(),
+            // Desktop-sized, because layout tests assert measured pixels: the
+            // default 414px viewport leaves no room beside a 320px document
+            // minimum, so every width clamps to the sidebar minimum instead.
+            viewport: { width: 1280, height: 800 },
             instances: [{ browser: 'chromium' }]
           }
         }

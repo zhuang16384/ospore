@@ -1,7 +1,9 @@
 import { ipcMain } from 'electron'
 import { registerFileHandlers } from './contexts/file-ipc'
+import { registerLayoutHandlers } from './contexts/layout-ipc'
 import { registerShellHandlers } from './contexts/shell-ipc'
 import { registerWorkspaceHandlers } from './contexts/workspace-ipc'
+import type { PreferencesService } from './preferences.service'
 import type { WorkspaceService } from './workspace.service'
 
 /**
@@ -12,8 +14,9 @@ import type { WorkspaceService } from './workspace.service'
  * tests, and gives one place to add cross-cutting concerns (sender validation,
  * a ready handshake, …) without touching every feature.
  *
- * v0 registers four read-only channels; v0.1 adds conversation/agent channels
- * and the `file:changed` push.
+ * v0 registers seven channels — six reads plus the one layout preference write
+ * (`layout:set`). v0.1 adds conversation/agent channels and the `file:changed`
+ * push.
  */
 
 export interface IPCMainLike {
@@ -27,9 +30,11 @@ export const ipcManager: IPCMainLike = ipcMain
 
 export function setupIPC(
   customIPCMain: IPCMainLike = ipcManager,
-  workspace: WorkspaceService
+  workspace: WorkspaceService,
+  preferences: PreferencesService
 ): void {
   registerWorkspaceHandlers(customIPCMain, workspace)
   registerFileHandlers(customIPCMain, workspace)
+  registerLayoutHandlers(customIPCMain, preferences)
   registerShellHandlers(customIPCMain)
 }

@@ -43,6 +43,17 @@ describe('createOsporeAPI', () => {
     expect(invoke).toHaveBeenCalledWith(IpcEvents.FILE_READ, 'docs/a.md')
   })
 
+  it('layout methods forward the geometry', async () => {
+    const invoke = vi.fn().mockResolvedValue({ sidebarWidth: 320 })
+    const api = createOsporeAPI(makeRenderer(invoke))
+
+    await api.getLayout()
+    expect(invoke).toHaveBeenCalledWith(IpcEvents.LAYOUT_GET)
+
+    await api.setLayout({ sidebarWidth: 320 })
+    expect(invoke).toHaveBeenCalledWith(IpcEvents.LAYOUT_SET, { sidebarWidth: 320 })
+  })
+
   it('propagates rejections from the main process', async () => {
     const invoke = vi.fn().mockRejectedValue(new Error('No workspace is open'))
     const api = createOsporeAPI(makeRenderer(invoke))

@@ -4,8 +4,10 @@ import { join } from 'node:path'
 import { describe, expect, it, vi } from 'vitest'
 import { IpcEvents } from '@shared/ipc-events'
 import type { WorkspaceState } from '@shared/domain'
+import { normalizeLayout } from '@shared/layout'
 import { setupIPC, type IPCMainLike } from '../ipc'
 import { canonicalRoot } from '../workspace'
+import type { PreferencesService } from '../preferences.service'
 import type { WorkspaceService } from '../workspace.service'
 
 type Handler = (...args: unknown[]) => unknown
@@ -32,17 +34,35 @@ function makeWorkspace(root: string | null): WorkspaceService {
   }
 }
 
+function makePreferences(): PreferencesService {
+  let layout = normalizeLayout(null)
+  return {
+    layout: () => layout,
+    setLayout: (next) => {
+      layout = normalizeLayout(next)
+      return layout
+    }
+  }
+}
+
+/** Every `setupIPC` call in this file wants the same throwaway services. */
+function setup(ipc: IPCMainLike, workspace: WorkspaceService): void {
+  setupIPC(ipc, workspace, makePreferences())
+}
+
 describe('setupIPC (v0)', () => {
-  it('registers exactly the five read-only channels', () => {
+  it('registers the six read channels plus the one layout write', () => {
     const { ipc, handlers } = makeIPC()
 
-    setupIPC(ipc, makeWorkspace('/ws'))
+    setup(ipc, makeWorkspace('/ws'))
 
     expect([...handlers.keys()].sort()).toEqual(
       [
         IpcEvents.WORKSPACE_GET,
         IpcEvents.WORKSPACE_OPEN,
         IpcEvents.FILE_TREE,
+        IpcEvents.LAYOUT_GET,
+        IpcEvents.LAYOUT_SET,
         IpcEvents.FILE_READ,
         IpcEvents.OPEN_EXTERNAL
       ].sort()
@@ -51,7 +71,7 @@ describe('setupIPC (v0)', () => {
 
   it('workspace:get answers with the current state', () => {
     const { ipc, handlers } = makeIPC()
-    setupIPC(ipc, makeWorkspace('/ws'))
+    setup(ipc, makeWorkspace('/ws'))
 
     expect(handlers.get(IpcEvents.WORKSPACE_GET)?.({})).toEqual({ root: '/ws', recents: [] })
   })
@@ -59,7 +79,7 @@ describe('setupIPC (v0)', () => {
   it('workspace:open forwards an explicit path, and omits an empty one', async () => {
     const { ipc, handlers } = makeIPC()
     const workspace = makeWorkspace(null)
-    setupIPC(ipc, workspace)
+    setup(ipc, workspace)
     const open = handlers.get(IpcEvents.WORKSPACE_OPEN)!
 
     await open({}, '/picked')
@@ -74,7 +94,7 @@ describe('setupIPC (v0)', () => {
     try {
       writeFileSync(join(base, 'note.md'), '# hello')
       const { ipc, handlers } = makeIPC()
-      setupIPC(ipc, makeWorkspace(canonicalRoot(base)))
+      setup(ipc, makeWorkspace(canonicalRoot(base)))
 
       expect(handlers.get(IpcEvents.FILE_READ)?.({}, 'note.md')).toEqual({
         path: 'note.md',
@@ -90,24 +110,37 @@ describe('setupIPC (v0)', () => {
 
   it('file handlers refuse to run without a workspace', () => {
     const { ipc, handlers } = makeIPC()
-    setupIPC(ipc, makeWorkspace(null))
+    setup(ipc, makeWorkspace(null))
 
     expect(() => handlers.get(IpcEvents.FILE_TREE)?.({}, '')).toThrow('No workspace is open')
   })
 
   it('rejects non-string paths from the renderer', () => {
     const { ipc, handlers } = makeIPC()
-    setupIPC(ipc, makeWorkspace('/ws'))
+    setup(ipc, makeWorkspace('/ws'))
 
     expect(() => handlers.get(IpcEvents.FILE_READ)?.({}, 42)).toThrow('Path must be a string')
   })
 
   it('opens only http(s) URLs externally', async () => {
     const { ipc, handlers } = makeIPC()
-    setupIPC(ipc, makeWorkspace('/ws'))
+    setup(ipc, makeWorkspace('/ws'))
     const openExternal = handlers.get(IpcEvents.OPEN_EXTERNAL)!
 
     await expect(openExternal({}, 'file:///etc/passwd')).rejects.toThrow('Only http(s) URLs')
     await expect(openExternal({}, 'javascript:alert(1)')).rejects.toThrow('Only http(s) URLs')
+  })
+
+  it('round-trips a layout through the preference service, clamped', () => {
+    const { ipc, handlers } = makeIPC()
+    const preferences = makePreferences()
+    setupIPC(ipc, makeWorkspace('/ws'), preferences)
+
+    expect(handlers.get(IpcEvents.LAYOUT_GET)?.({})).toEqual({ sidebarWidth: 288 })
+    // A renderer (or a hand-edited config) cannot push an unusable width.
+    expect(handlers.get(IpcEvents.LAYOUT_SET)?.({}, { sidebarWidth: 99_999 })).toEqual({
+      sidebarWidth: 720
+    })
+    expect(handlers.get(IpcEvents.LAYOUT_GET)?.({})).toEqual({ sidebarWidth: 720 })
   })
 })

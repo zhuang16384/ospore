@@ -23,6 +23,9 @@ test.describe('workspace viewer', () => {
     writeFileSync(join(workspace, 'notes.txt'), 'plain text')
     seedRecents(dataDir, workspace)
 
+    // Carried from the first launch to the restarted one.
+    let resizedWidth = 0
+
     const app = await launchOspore(dataDir)
     try {
       const page = await app.firstWindow()
@@ -34,6 +37,18 @@ test.describe('workspace viewer', () => {
       await page.getByText('README.md').click()
       // Rendered markdown, not the raw source.
       await expect(page.getByRole('heading', { name: 'From disk' })).toBeVisible()
+
+      // Resize the rail. The width has to survive a restart, which is the only
+      // part of this that needs a real config.json and a real round trip.
+      const rail = page.getByRole('navigation', { name: 'Files' })
+      const handle = page.getByTestId('splitter')
+      const box = (await handle.boundingBox())!
+      await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2)
+      await page.mouse.down()
+      await page.mouse.move(box.x + 400, box.y + box.height / 2, { steps: 5 })
+      await page.mouse.up()
+      resizedWidth = Math.round((await rail.boundingBox())!.width)
+      expect(resizedWidth).toBeGreaterThan(288)
     } finally {
       await app.close()
     }
@@ -44,6 +59,11 @@ test.describe('workspace viewer', () => {
       const page = await restarted.firstWindow()
       await page.getByText('README.md').click()
       await expect(page.getByRole('heading', { name: 'From disk' })).toBeVisible()
+
+      const rail = page.getByRole('navigation', { name: 'Files' })
+      await expect
+        .poll(async () => Math.round((await rail.boundingBox())!.width))
+        .toBe(resizedWidth)
     } finally {
       await restarted.close()
       rmSync(workspace, { recursive: true, force: true })

@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { FileNode, RecentWorkspace, WorkspaceState } from '@shared/domain'
 import App from '../App'
 import { useFiles } from '../stores/files.store'
+import { useLayout } from '../stores/layout.store'
 import { useWorkspace } from '../stores/workspace.store'
 
 const recents: RecentWorkspace[] = [{ path: '/repo', name: 'repo', lastOpenedAt: 1704067200 }]
@@ -21,6 +22,8 @@ function mockApi(initial: WorkspaceState): void {
     openWorkspace: vi.fn().mockResolvedValue(initial),
     listDirectory: vi.fn().mockResolvedValue(rootChildren),
     readFile: vi.fn().mockResolvedValue({ path: 'README.md', text: '# Hello' }),
+    getLayout: vi.fn().mockResolvedValue({ sidebarWidth: 288 }),
+    setLayout: vi.fn().mockImplementation((layout) => Promise.resolve(layout)),
     openExternal: vi.fn()
   } as unknown as Window['ospore']
 }
@@ -35,6 +38,7 @@ function resetStores(): void {
     docLoading: false,
     error: null
   })
+  useLayout.setState({ sidebarWidth: 288, dragging: false, error: null })
 }
 
 describe('App', () => {

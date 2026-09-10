@@ -18,8 +18,9 @@ export function FileTree(): JSX.Element {
     void ensureLoaded('')
   }, [ensureLoaded])
 
+  // The shell owns the rail's width; this just fills whatever box it is given.
   return (
-    <nav aria-label="Files" className="scrollbar-thin h-full w-72 shrink-0 overflow-y-auto py-1">
+    <nav aria-label="Files" className="scrollbar-thin h-full w-full overflow-y-auto py-1">
       <FileTreeLevel dirPath="" depth={0} />
     </nav>
   )

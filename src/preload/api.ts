@@ -1,12 +1,13 @@
 import { IpcEvents } from '@shared/ipc-events'
 import type { FileContent, FileNode, WorkspaceState } from '@shared/domain'
+import type { LayoutPreferences } from '@shared/layout'
 
 /**
  * The bridge surface exposed to the renderer as `window.ospore`.
  *
- * Only wrapped methods are exposed — never `ipcRenderer` itself. v0 is
- * read-only (four invoke channels); v0.1 adds agent channels plus `on()`
- * subscriptions for streaming and file-change pushes.
+ * Only wrapped methods are exposed — never `ipcRenderer` itself. Everything here
+ * reads except `setLayout`, which records pane geometry. v0.1 adds agent
+ * channels plus `on()` subscriptions for streaming and file-change pushes.
  */
 
 export interface IPCRendererLike {
@@ -26,6 +27,10 @@ export interface OsporeAPI {
   listDirectory(relPath: string): Promise<FileNode[]>
   /** Read a workspace-relative text file. */
   readFile(relPath: string): Promise<FileContent>
+  /** Persisted pane geometry. */
+  getLayout(): Promise<LayoutPreferences>
+  /** Record new pane geometry. Returns what was actually stored. */
+  setLayout(layout: LayoutPreferences): Promise<LayoutPreferences>
   /** Hand an http(s) URL to the OS browser. */
   openExternal(url: string): Promise<void>
 }
@@ -40,6 +45,9 @@ export function createOsporeAPI(ipcRenderer: IPCRendererLike): OsporeAPI {
       invoke(IpcEvents.WORKSPACE_OPEN, path),
     listDirectory: (relPath: string): Promise<FileNode[]> => invoke(IpcEvents.FILE_TREE, relPath),
     readFile: (relPath: string): Promise<FileContent> => invoke(IpcEvents.FILE_READ, relPath),
+    getLayout: (): Promise<LayoutPreferences> => invoke(IpcEvents.LAYOUT_GET),
+    setLayout: (layout: LayoutPreferences): Promise<LayoutPreferences> =>
+      invoke(IpcEvents.LAYOUT_SET, layout),
     openExternal: (url: string): Promise<void> => invoke(IpcEvents.OPEN_EXTERNAL, url)
   }
 }

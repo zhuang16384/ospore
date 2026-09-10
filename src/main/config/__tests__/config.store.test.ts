@@ -3,6 +3,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { MAX_RECENT_WORKSPACES } from '@shared/domain'
+import { DEFAULT_LAYOUT, SIDEBAR } from '@shared/layout'
 import { createConfigStore, type ConfigStore } from '../config.store'
 
 /**
@@ -33,7 +34,7 @@ describe('config store', () => {
   }
 
   it('starts empty when no config file exists', () => {
-    expect(store.read()).toEqual({ version: 1, recentWorkspaces: [] })
+    expect(store.read()).toEqual({ version: 1, recentWorkspaces: [], layout: DEFAULT_LAYOUT })
   })
 
   it('remembers a workspace and re-reads it from disk', () => {
@@ -83,7 +84,7 @@ describe('config store', () => {
 
     const config = store.read()
 
-    expect(config).toEqual({ version: 1, recentWorkspaces: [] })
+    expect(config).toEqual({ version: 1, recentWorkspaces: [], layout: DEFAULT_LAYOUT })
     expect(readFileSync(`${configPath()}.bak`, 'utf8')).toBe('{ this is not json')
     // the config was rebuilt, so the app is usable from here on
     expect(JSON.parse(readFileSync(configPath(), 'utf8'))).toEqual(config)
@@ -95,13 +96,13 @@ describe('config store', () => {
       JSON.stringify({ version: 1, recentWorkspaces: [{ path: 42 }, 'nope', { path: '' }] })
     )
 
-    expect(store.read()).toEqual({ version: 1, recentWorkspaces: [] })
+    expect(store.read()).toEqual({ version: 1, recentWorkspaces: [], layout: DEFAULT_LAYOUT })
   })
 
   it('tolerates a document whose recents field has the wrong type', () => {
     writeFileSync(configPath(), JSON.stringify({ version: 1, recentWorkspaces: 'nope' }))
 
-    expect(store.read()).toEqual({ version: 1, recentWorkspaces: [] })
+    expect(store.read()).toEqual({ version: 1, recentWorkspaces: [], layout: DEFAULT_LAYOUT })
   })
 
   it('writes atomically — a successful write leaves no temp file behind', () => {
@@ -109,5 +110,53 @@ describe('config store', () => {
 
     expect(JSON.parse(readFileSync(configPath(), 'utf8')).recentWorkspaces).toHaveLength(1)
     expect(() => readFileSync(`${configPath()}.tmp`, 'utf8')).toThrow()
+  })
+
+  it('defaults the layout of a config written before the field existed', () => {
+    // This is the shape v0.0.1 shipped; it must not be treated as corrupt.
+    writeFileSync(configPath(), JSON.stringify({ version: 1, recentWorkspaces: [] }), 'utf8')
+
+    expect(store.read().layout).toEqual(DEFAULT_LAYOUT)
+  })
+
+  it('persists a layout and re-reads it from disk', () => {
+    store.setLayout({ sidebarWidth: 400 })
+
+    expect(store.read().layout).toEqual({ sidebarWidth: 400 })
+    expect(JSON.parse(readFileSync(configPath(), 'utf8')).layout).toEqual({ sidebarWidth: 400 })
+  })
+
+  it('clamps a layout rather than storing an unusable width', () => {
+    expect(store.setLayout({ sidebarWidth: 5 }).layout).toEqual({ sidebarWidth: SIDEBAR.min })
+    expect(store.setLayout({ sidebarWidth: 99_999 }).layout).toEqual({ sidebarWidth: SIDEBAR.max })
+  })
+
+  it('repairs a hand-edited layout without discarding the recents', () => {
+    const dir = makeDir('project')
+    store.rememberWorkspace(dir)
+    writeFileSync(
+      configPath(),
+      JSON.stringify({ version: 1, recentWorkspaces: [{ path: dir }], layout: 'wide' }),
+      'utf8'
+    )
+
+    const config = store.read()
+    expect(config.layout).toEqual(DEFAULT_LAYOUT)
+    expect(config.recentWorkspaces.map((entry) => entry.path)).toEqual([dir])
+  })
+
+  it('does not forget the layout when a workspace is opened', () => {
+    store.setLayout({ sidebarWidth: 400 })
+    store.rememberWorkspace(makeDir('project'))
+
+    expect(store.read().layout).toEqual({ sidebarWidth: 400 })
+  })
+
+  it('does not forget the recents when the layout is saved', () => {
+    const dir = makeDir('project')
+    store.rememberWorkspace(dir)
+    store.setLayout({ sidebarWidth: 400 })
+
+    expect(store.read().recentWorkspaces.map((entry) => entry.path)).toEqual([dir])
   })
 })
